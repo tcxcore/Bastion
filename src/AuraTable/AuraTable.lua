@@ -53,7 +53,7 @@ function AuraTable:OnUpdate(auras)
     if updatedAuras and #updatedAuras > 0 then
         for i = 1, #updatedAuras do
             local id = updatedAuras[i]
-            local newAura = C_UnitAuras_GetAuraDataByAuraInstanceID(self.unit:GetOMToken(), id);
+            local newAura = C_UnitAuras.GetAuraDataByAuraInstanceID(self.unit:GetOMToken(), id);
             if newAura then
                 local aura = Bastion.Aura:CreateFromUnitAuraInfo(newAura)
                 self:AddOrUpdateAuraInstanceID(aura:GetAuraInstanceID(), aura)
