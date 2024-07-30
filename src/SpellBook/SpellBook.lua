@@ -48,6 +48,10 @@ end
 ---@param name string
 ---@return Spell
 function SpellBook:GetSpellByName(name)
+    if C_Spell.GetSpellInfo then
+        local info = C_Spell.GetSpellInfo(name)
+        return self:GetSpell(info.spellID)
+    end
     local _, rank, icon, castTime, minRange, maxRange, spellID, originalIcon = GetSpellInfo(name)
     return self:GetSpell(spellID)
 end
