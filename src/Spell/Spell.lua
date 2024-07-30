@@ -80,24 +80,53 @@ end
 -- Get the spells name
 ---@return string
 function Spell:GetName()
+    if C_Spell.GetSpellInfo then
+        local info = C_Spell.GetSpellInfo(self:GetID())
+        return info and info.name or nil
+    end
     return GetSpellInfo(self:GetID())
 end
 
 -- Get the spells icon
 ---@return number
 function Spell:GetIcon()
+    if C_Spell.GetSpellInfo then
+        local info = C_Spell.GetSpellInfo(self:GetID())
+        return info and info.iconID or nil
+    end
     return select(3, GetSpellInfo(self:GetID()))
 end
 
 -- Get the spells cooldown
 ---@return number
 function Spell:GetCooldown()
+    if C_Spell.GetSpellCooldown then
+        local info = C_Spell.GetSpellCooldown(self:GetID())
+        return info and info.duration or nil
+    end
     return select(2, GetSpellCooldown(self:GetID()))
 end
 
 -- Get the full cooldown (time until all charges are available)
 ---@return number
 function Spell:GetFullRechargeTime()
+    if C_Spell.GetSpellCooldown then
+        local info = C_Spell.GetSpellCooldown(self:GetID())
+        if info.isEnabled == 0 then
+            return 0
+        end
+
+        local chargeInfo = C_Spell.GetSpellCharges(self:GetID())
+        if chargeInfo.currentCharges == chargeInfo.maxCharges then
+            return 0
+        end
+
+        if chargeInfo.currentCharges == 0 then
+            return info.startTime + info.duration - GetTime()
+        end
+
+        return chargeInfo.cooldownStartTime + chargeInfo.cooldownDuration - GetTime()
+    end
     local start, duration, enabled = GetSpellCooldown(self:GetID())
     if enabled == 0 then
         return 0
@@ -136,6 +165,10 @@ end
 -- Get the spells cooldown remaining
 ---@return number
 function Spell:GetCooldownRemaining()
+    if C_Spell.GetSpellCooldown then
+        local info = C_Spell.GetSpellCooldown(self:GetID())
+        return info and info.startTime + info.duration - GetTime() or nil
+    end
     local start, duration = GetSpellCooldown(self:GetID())
     return start + duration - GetTime()
 end
@@ -143,6 +176,9 @@ end
 -- Get the spell count
 ---@return number
 function Spell:GetCount()
+    if C_Spell.GetSpellCastCount then
+        return C_Spell.GetSpellCastCount(self:GetID())
+    end
     return GetSpellCount(self:GetID())
 end
 
@@ -252,6 +288,8 @@ end
 -- Check if the spell is known
 ---@return boolean
 function Spell:IsKnown()
+    local IsSpellKnown = C_Spell.IsSpellKnown and C_Spell.IsSpellKnown or IsSpellKnown
+    local IsPlayerSpell = C_Spell.IsPlayerSpell and C_Spell.IsPlayerSpell or IsPlayerSpell
     local isKnown = IsSpellKnown(self:GetID())
     local isPlayerSpell = IsPlayerSpell(self:GetID())
     return isKnown or isPlayerSpell
@@ -260,12 +298,20 @@ end
 -- Check if the spell is on cooldown
 ---@return boolean
 function Spell:IsOnCooldown()
+    if C_Spell.GetSpellCooldown then
+        local info = C_Spell.GetSpellCooldown(self:GetID())
+        return info and info.duration > 0
+    end
     return select(2, GetSpellCooldown(self:GetID())) > 0
 end
 
 -- Check if the spell is usable
 ---@return boolean
 function Spell:IsUsable()
+    if C_Spell.IsSpellUsable then
+        local usable, noMana = C_Spell.IsSpellUsable(self:GetID())
+        return usable or usableExcludes[self:GetID()] and not noMana
+    end
     local usable, noMana = IsUsableSpell(self:GetID())
     return usable or usableExcludes[self:GetID()] and not noMana
 end
@@ -350,6 +396,9 @@ end
 -- Check if the spell is castable and cast it
 ---@return boolean
 function Spell:HasRange()
+    if C_Spell.SpellHasRange then
+        return C_Spell.SpellHasRange(self:GetID())
+    end
     return SpellHasRange(self:GetName())
 end
 
@@ -357,6 +406,10 @@ end
 ---@return number
 ---@return number
 function Spell:GetRange()
+    if C_Spell.GetSpellInfo then
+        local info = C_Spell.GetSpellInfo(self:GetID())
+        return info and info.minRange or nil, info and info.maxRange or nil
+    end
     local name, rank, icon, castTime, minRange, maxRange, spellID, originalIcon = GetSpellInfo(self:GetID())
     return maxRange, minRange
 end
@@ -365,6 +418,7 @@ end
 ---@param unit Unit
 ---@return boolean
 function Spell:IsInRange(unit)
+    local IsSpellInRange = C_Spell.IsSpellInRange and C_Spell.IsSpellInRange or IsSpellInRange
     local hasRange = self:HasRange()
     local inRange = IsSpellInRange(self:GetName(), unit:GetOMToken())
 
@@ -406,20 +460,50 @@ end
 -- Get the spells charges
 ---@return number
 function Spell:GetCharges()
+    if C_Spell.GetSpellCharges then
+        local info = C_Spell.GetSpellCharges(self:GetID())
+        return info and info.currentCharges or nil
+    end
     return GetSpellCharges(self:GetID())
 end
 
 function Spell:GetMaxCharges()
+    if C_Spell.GetSpellCharges then
+        local info = C_Spell.GetSpellCharges(self:GetID())
+        return info and info.maxCharges or nil
+    end
     return select(2, GetSpellCharges(self:GetID()))
 end
 
 function Spell:GetCastLength()
+    if C_Spell.GetSpellInfo then
+        local info = C_Spell.GetSpellInfo(self:GetID())
+        return info and info.castTime or nil
+    end
     return select(4, GetSpellInfo(self:GetID()))
 end
 
 -- Get the spells charges
 ---@return number
 function Spell:GetChargesFractional()
+    if C_Spell.GetSpellCharges then
+        local info = C_Spell.GetSpellCharges(self:GetID())
+
+        if info.currentCharges == info.maxCharges then
+            return info.maxCharges
+        end
+
+        if info.currentCharges == 0 then
+            return 0
+        end
+
+        local timeSinceStart = GetTime() - info.cooldownStartTime
+        local timeLeft = info.cooldownDuration - timeSinceStart
+        local timePerCharge = info.cooldownDuration / info.maxCharges
+        local chargesFractional = info.currentCharges + (timeLeft / timePerCharge)
+
+        return chargesFractional
+    end
     local charges, maxCharges, start, duration = GetSpellCharges(self:GetID())
 
     if charges == maxCharges then
@@ -441,6 +525,10 @@ end
 -- Get the spells charges remaining
 ---@return number
 function Spell:GetChargesRemaining()
+    if C_Spell.GetSpellCharges then
+        local info = C_Spell.GetSpellCharges(self:GetID())
+        return info and info.currentCharges or nil
+    end
     local charges, maxCharges, start, duration = GetSpellCharges(self:GetID())
     return charges
 end
@@ -546,6 +634,10 @@ end
 -- GetCost
 ---@return number
 function Spell:GetCost()
+    if C_Spell.GetSpellPowerCost then
+        local info = C_Spell.GetSpellPowerCost(self:GetID())
+        return info and info.cost or 0
+    end
     local cost = GetSpellPowerCost(self:GetID())
     return cost and cost.cost or 0
 end
