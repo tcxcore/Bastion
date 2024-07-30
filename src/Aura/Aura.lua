@@ -75,6 +75,11 @@ function Aura:New(unit, index, type)
         return self
     end
 
+    if C_UnitAuras.GetAuraDataByIndex then
+        local unitAuraInfo = C_UnitAuras.GetAuraDataByIndex(unit:GetOMToken(), index, type)
+        return Aura:CreateFromUnitAuraInfo(unitAuraInfo)
+    end
+
     local name, icon, count, dispelType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId,
         canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = UnitAura(unit:GetOMToken(), index, type)
 
