@@ -51,7 +51,13 @@ function Item:New(id)
     self.ItemID = id
 
     -- Register spell in spellbook
-    local name, spellID = GetItemSpell(self:GetID())
+    local name, spellID
+
+    if C_Item.GetItemSpell then
+        name, spellID = C_Item.GetItemSpell(self:GetID())
+    else
+        name, spellID = GetItemSpell(self:GetID())
+    end
     if spellID then
         self.spellID = spellID
         Bastion.Globals.SpellBook:GetSpell(spellID)
@@ -69,18 +75,27 @@ end
 -- Get the Items name
 ---@return string
 function Item:GetName()
+    if C_Item.GetItemInfo then
+        return C_Item.GetItemName(self:GetID())
+    end
     return GetItemInfo(self:GetID())
 end
 
 -- Get the Items icon
 ---@return number
 function Item:GetIcon()
+    if C_Item.GetItemIconByID then
+        return C_Item.GetItemIconByID(self:GetID())
+    end
     return select(3, GetItemInfo(self:GetID()))
 end
 
 -- Get the Items cooldown
 ---@return number
 function Item:GetCooldown()
+    if C_Item.GetItemCooldown then
+        return select(2, C_Item.GetItemCooldown(self:GetID()))
+    end
     return select(2, C_Container.GetItemCooldown(self:GetID()))
 end
 
@@ -105,6 +120,10 @@ end
 -- Get the Items cooldown remaining
 ---@return number
 function Item:GetCooldownRemaining()
+    if C_Item.GetItemCooldown then
+        local start, duration = C_Item.GetItemCooldown(self:GetID())
+        return start + duration - GetTime()
+    end
     local start, duration = C_Container.GetItemCooldown(self:GetID())
     return start + duration - GetTime()
 end
@@ -131,7 +150,11 @@ function Item:Use(unit, condition)
     self.wasLooking = IsMouselooking()
 
     -- Use the Item
-    UseItemByName(self:GetName(), unit:GetOMToken())
+    if C_Item.UseItemByName then
+        C_Item.UseItemByName(self:GetName(), unit:GetOMToken())
+    else
+        UseItemByName(self:GetName(), unit:GetOMToken())
+    end
 
     Bastion:Debug("Using", self)
 
@@ -161,18 +184,28 @@ end
 -- Check if the Item is known
 ---@return boolean
 function Item:IsEquipped()
+    if C_Item.IsEquippedItem then
+        return C_Item.IsEquippedItem(self:GetID())
+    end
     return IsEquippedItem(self:GetID())
 end
 
 -- Check if the Item is on cooldown
 ---@return boolean
 function Item:IsOnCooldown()
+    if C_Item.GetItemCooldown then
+        return select(2, C_Item.GetItemCooldown(self:GetID())) > 0
+    end
     return select(2, C_Container.GetItemCooldown(self:GetID())) > 0
 end
 
 -- Check if the Item is usable
 ---@return boolean
 function Item:IsUsable()
+    if C_Item.IsUsableItem then
+        local usable, noMana = C_Item.IsUsableItem(self:GetID())
+        return usable or usableExcludes[self:GetID()]
+    end
     local usable, noMana = IsUsableItem(self:GetID())
     return usable or usableExcludes[self:GetID()]
 end
@@ -187,6 +220,9 @@ end
 -- Is equippable
 ---@return boolean
 function Item:IsEquippable()
+    if C_Item.IsEquippableItem then
+        return C_Item.IsEquippableItem(self:GetID())
+    end
     return IsEquippableItem(self:GetID())
 end
 
@@ -317,6 +353,9 @@ end
 -- Get the Items charges
 ---@return number
 function Item:GetCharges()
+    if C_Item.GetItemCount then
+        return C_Item.GetItemCount(self:GetID())
+    end
     return GetItemCharges(self:GetID())
 end
 
