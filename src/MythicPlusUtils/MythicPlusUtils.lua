@@ -462,7 +462,14 @@ function MythicPlusUtils:New()
             return
         end
 
-        local name = GetSpellInfo(spellID)
+        local name
+
+        if C_Spell.GetSpellInfo then
+            local info = C_Spell.GetSpellInfo(spellID)
+            name = info and info.name or ''
+        else
+            name = GetSpellInfo(spellID)
+        end
 
         self.loggedCasts[spellID] = true
 
@@ -481,7 +488,14 @@ function MythicPlusUtils:New()
             return
         end
 
-        local name = GetSpellInfo(spellID)
+        local name
+
+        if C_Spell.GetSpellInfo then
+            local info = C_Spell.GetSpellInfo(spellID)
+            name = info and info.name or ''
+        else
+            name = GetSpellInfo(spellID)
+        end
 
         self.loggedCasts[spellID] = true
 
