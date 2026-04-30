@@ -239,7 +239,8 @@ end
 ---@param b Vector3
 ---@return number
 function Vector3:Distance(b)
-    return FastDistance(self.x, self.y, self.z, b.x, b.y, b.z)
+    local dx, dy, dz = self.x - b.x, self.y - b.y, self.z - b.z
+    return math.sqrt(dx * dx + dy * dy + dz * dz)
 end
 
 ---@param to Vector3

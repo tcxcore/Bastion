@@ -1,4 +1,5 @@
-local Tinkr, Bastion = ...
+﻿local _, Bastion = ...
+local TCX = Bastion.TCX
 
 -- Create a new Timer class
 ---@class Timer

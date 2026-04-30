@@ -1,4 +1,5 @@
-local Tinkr, Bastion = ...
+local _, Bastion = ...
+local TCX = Bastion.TCX
 
 -- Create a new SpellBook class
 ---@class SpellBook
@@ -16,6 +17,7 @@ end
 -- Get a spell from the spellbook
 ---@return Spell
 function SpellBook:GetSpell(id)
+    id = TCX.Unwrap(id)
     if self.spells[id] == nil then
         self.spells[id] = Bastion.Spell:New(id)
     end
@@ -27,7 +29,7 @@ end
 ---@return Spell, ... Spell
 function SpellBook:GetSpells(...)
     local spells = {}
-    for _, id in ipairs({...}) do
+    for _, id in ipairs({ ... }) do
         table.insert(spells, self:GetSpell(id))
     end
 
@@ -38,7 +40,7 @@ end
 ---@return List
 function SpellBook:GetList(...)
     local spells = {}
-    for _, id in ipairs({...}) do
+    for _, id in ipairs({ ... }) do
         table.insert(spells, self:GetSpell(id))
     end
 
@@ -58,6 +60,7 @@ end
 
 ---@return Spell
 function SpellBook:GetIfRegistered(id)
+    id = TCX.Unwrap(id)
     return self.spells[id]
 end
 

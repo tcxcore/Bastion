@@ -1,24 +1,42 @@
-local Tinkr = ...
+local addonName = ...
 
-local Evaulator = Tinkr.Evaluator
+local TCX = C_Timer.TCX or {}
 
 ---@class Bastion
-local Bastion = {DebugMode = false}
+local Bastion = { DebugMode = false }
+Bastion.TCX = TCX
 Bastion.__index = Bastion
 
+local loaded_modules = {}
+local function custom_require(file, env_arg)
+    if not file:match("%.lua$") then
+        file = file .. ".lua"
+    end
+    
+    if loaded_modules[file] then return loaded_modules[file] end
+    
+    local content = TCX.ReadFile(file)
+    if not content then error("custom_require: Cannot find file " .. file) end
+    
+    local func, err = loadstring(content, file)
+    if not func then error("custom_require: Error compiling " .. file .. ": " .. err) end
+    
+    local result = func(file, env_arg)
+    loaded_modules[file] = result or true
+    return result
+end
+
 function Bastion:Require(file)
-    -- If require starts with an @ then we require from the scripts/bastion/scripts folder
     if file:sub(1, 1) == '@' then
         file = file:sub(2)
-        -- print('1')
-        return require('scripts/bastion/scripts/' .. file, Bastion)
+        if file:sub(1, 1) == "/" then file = file:sub(2) end
+        return custom_require('scripts/Bastion/scripts/' .. file, Bastion)
     elseif file:sub(1, 1) == "~" then
         file = file:sub(2)
-        -- print("2")
-        return require('scripts/bastion/' .. file, Bastion)
+        if file:sub(1, 1) == "/" then file = file:sub(2) end
+        return custom_require('scripts/Bastion/' .. file, Bastion)
     else
-        -- print("Normal req")
-        return require(file, Bastion)
+        return custom_require(file, Bastion)
     end
 end
 
@@ -27,15 +45,22 @@ local function Load(dir)
 
     if dir:sub(1, 1) == '@' then
         dir = dir:sub(2)
-        dir = 'scripts/bastion/scripts/' .. dir
+        if dir:sub(1, 1) == "/" then dir = dir:sub(2) end
+        dir = 'scripts/Bastion/scripts/' .. dir
     end
 
     if dir:sub(1, 1) == '~' then
         dir = dir:sub(2)
-        dir = 'scripts/bastion/' .. dir
+        if dir:sub(1, 1) == "/" then dir = dir:sub(2) end
+        dir = 'scripts/Bastion/' .. dir
     end
 
-    local files = ListFiles(dir)
+    -- 确保目录以斜杠结尾
+    if dir:sub(-1) ~= "/" then
+        dir = dir .. "/"
+    end
+
+    local files = TCX.ListFiles(dir)
 
     for i = 1, #files do
         local file = files[i]
@@ -54,6 +79,9 @@ end
 function Bastion.Bootstrap()
 
     Bastion.Globals = {}
+    
+    -- 首先加载底层适配层，注入诸如 ObjectGUID, Unwrap, Objects 等全局兼容性依赖
+    Bastion.require("TCXAdapter")
 
     ---@type ClassMagic
     Bastion.ClassMagic = Bastion.require("ClassMagic")
@@ -70,6 +98,10 @@ function Bastion.Bootstrap()
     Bastion.Sequencer = Bastion.require("Sequencer")
     ---@type Command
     Bastion.Command = Bastion.require("Command")
+    
+    -- 初始化本地化支持
+    Bastion.Locale = Bastion.require("Locale"):GetLocale()
+    local L = Bastion.Locale
     ---@type Cache
     Bastion.Cache = Bastion.require("Cache")
     ---@type Cacheable
@@ -144,51 +176,15 @@ function Bastion.Bootstrap()
     local pguid = UnitGUID("player")
     local missed = {}
 
-    Bastion.Globals.EventManager:RegisterWoWEvent("COMBAT_LOG_EVENT_UNFILTERED",
-                                                  function()
-        local args = {CombatLogGetCurrentEventInfo()}
-
-        local subEvent = args[2]
-        local sourceGUID = args[4]
-        local destGUID = args[8]
-        local spellID = args[12]
-
-        -- if sourceGUID == pguid then
-        --     local args = { CombatLogGetCurrentEventInfo() }
-
-        --     for i = 1, #args do
-        --         Log(tostring(args[i]))
-        --     end
-        -- end
-
-        local u = Bastion.UnitManager[sourceGUID]
-        local u2 = Bastion.UnitManager[destGUID]
-
-        local t = GetTime()
-
-        if u then u:SetLastCombatTime(t) end
-
-        if u2 then
-            u2:SetLastCombatTime(t)
-
-            if subEvent == "SPELL_MISSED" and sourceGUID == pguid and spellID ==
-                408 then
-                local missType = args[15]
-
-                if missType == "IMMUNE" then
-                    local castingSpell = u:GetCastingOrChannelingSpell()
-
-                    if castingSpell then
-                        if not missed[castingSpell:GetID()] then
-                            missed[castingSpell:GetID()] = true
-                        end
-                    end
-                end
-            end
-        end
-    end)
-
     Bastion.Ticker = C_Timer.NewTicker(0.1, function()
+        -- 12.0 替代机制：通过轮询周围单位的 UnitAffectingCombat 状态来粗略更新战斗时间
+        local t = GetTime()
+        Bastion.UnitManager:EnumUnits(function(unit)
+            if unit and unit:IsAffectingCombat() then
+                unit:SetLastCombatTime(t)
+            end
+        end)
+
         if not Bastion.CombatTimer:IsRunning() and UnitAffectingCombat("player") then
             Bastion.CombatTimer:Start()
         elseif Bastion.CombatTimer:IsRunning() and
@@ -233,25 +229,25 @@ function Bastion.Bootstrap()
 
     local Command = Bastion.Command:New('bastion')
 
-    Command:Register('toggle', 'Toggle bastion on/off', function()
+    Command:Register('toggle', L['Toggle bastion on/off'], function()
         Bastion.Enabled = not Bastion.Enabled
         if Bastion.Enabled then
-            Bastion:Print("Enabled")
+            Bastion:Print(L["Enabled"])
         else
-            Bastion:Print("Disabled")
+            Bastion:Print(L["Disabled"])
         end
     end)
 
-    Command:Register('debug', 'Toggle debug mode on/off', function()
+    Command:Register('debug', L['Toggle debug mode on/off'], function()
         Bastion.DebugMode = not Bastion.DebugMode
         if Bastion.DebugMode then
-            Bastion:Print("Debug mode enabled")
+            Bastion:Print(L["Debug mode enabled"])
         else
-            Bastion:Print("Debug mode disabled")
+            Bastion:Print(L["Debug mode disabled"])
         end
     end)
 
-    Command:Register('dumpspells', 'Dump spells to a file', function()
+    Command:Register('dumpspells', L['Dump spells to a file'], function()
         local i = 1
         local rand = math.random(100000, 999999)
         local BOOKTYPE_SPELL = BOOKTYPE_SPELL or (Enum.SpellBookSpellBank.Player and Enum.SpellBookSpellBank.Player or 'spell')
@@ -278,7 +274,7 @@ function Bastion.Bootstrap()
 
             if spellID then
                 spellName = spellName:gsub("[%W%s]", "")
-                WriteFile('bastion-' .. UnitClass('player') .. '-' .. rand ..
+                TCX.WriteFile('bastion-' .. UnitClass('player') .. '-' .. rand ..
                               '.lua',
                           "local " .. spellName ..
                               " = Bastion.Globals.SpellBook:GetSpell(" ..
@@ -288,44 +284,44 @@ function Bastion.Bootstrap()
         end
     end)
 
-    Command:Register('module', 'Toggle a module on/off', function(args)
+    Command:Register('module', L['Toggle a module on/off'], function(args)
         local module = Bastion:FindModule(args[2])
         if module then
             module:Toggle()
             if module.enabled then
-                Bastion:Print("Enabled", module.name)
+                Bastion:Print(L["Enabled"], module.name)
             else
-                Bastion:Print("Disabled", module.name)
+                Bastion:Print(L["Disabled"], module.name)
             end
         else
-            Bastion:Print("Module not found")
+            Bastion:Print(L["Module not found"])
         end
     end)
 
-    Command:Register('mplus', 'Toggle m+ module on/off', function(args)
+    Command:Register('mplus', L['Toggle m+ module on/off'], function(args)
         local cmd = args[2]
         if cmd == 'debuffs' then
             Bastion.MythicPlusUtils:ToggleDebuffLogging()
-            Bastion:Print("Debuff logging", Bastion.MythicPlusUtils
-                              .debuffLogging and "enabled" or "disabled")
+            Bastion:Print(L["Debuff logging"], Bastion.MythicPlusUtils
+                              .debuffLogging and L["enabled"] or L["disabled"])
             return
         end
 
         if cmd == 'casts' then
             Bastion.MythicPlusUtils:ToggleCastLogging()
-            Bastion:Print("Cast logging",
-                          Bastion.MythicPlusUtils.castLogging and "enabled" or
-                              "disabled")
+            Bastion:Print(L["Cast logging"],
+                          Bastion.MythicPlusUtils.castLogging and L["enabled"] or
+                              L["disabled"])
             return
         end
 
-        Bastion:Print("[MythicPlusUtils] Unknown command")
-        Bastion:Print("Available commands:")
-        Bastion:Print("debuffs")
-        Bastion:Print("casts")
+        Bastion:Print(L["[MythicPlusUtils] Unknown command"])
+        Bastion:Print(L["Available commands:"])
+        Bastion:Print(L["debuffs"])
+        Bastion:Print(L["casts"])
     end)
 
-    Command:Register('missed', 'Dump the list of immune kidney shot spells',
+    Command:Register('missed', L['Dump the list of immune kidney shot spells'],
                      function()
         for k, v in pairs(missed) do Bastion:Print(k) end
     end)

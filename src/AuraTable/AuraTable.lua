@@ -1,4 +1,15 @@
-local Tinkr, Bastion = ...
+local _, Bastion = ...
+local TCX = Bastion.TCX
+local _u = TCX.Unwrap
+
+local C_UnitAuras = setmetatable({}, { __index = _G.C_UnitAuras })
+if _G.C_UnitAuras then
+    C_UnitAuras.GetAuraDataByAuraInstanceID = function(unit, id)
+        local info = _G.C_UnitAuras.GetAuraDataByAuraInstanceID(unit, id)
+        if info then _u(info) end
+        return info
+    end
+end
 
 -- Create a new AuraTable class
 ---@class AuraTable
@@ -53,7 +64,9 @@ function AuraTable:OnUpdate(auras)
     if updatedAuras and #updatedAuras > 0 then
         for i = 1, #updatedAuras do
             local id = updatedAuras[i]
-            local newAura = C_UnitAuras.GetAuraDataByAuraInstanceID(self.unit:GetOMToken(), id);
+            local token = self.unit:GetOMToken()
+            if not token then return end
+            local newAura = C_UnitAuras.GetAuraDataByAuraInstanceID(token, id);
             if newAura then
                 local aura = Bastion.Aura:CreateFromUnitAuraInfo(newAura)
                 self:AddOrUpdateAuraInstanceID(aura:GetAuraInstanceID(), aura)
@@ -118,7 +131,7 @@ end
 -- Get a units buffs
 ---@return nil
 function AuraTable:GetUnitBuffs()
-    if Tinkr.classic or Tinkr.era then
+    if TCX.classic or TCX.era then
         for i = 1, 40 do
             local aura = Bastion.Aura:New(self.unit, i, 'HELPFUL')
 
@@ -145,7 +158,10 @@ function AuraTable:GetUnitBuffs()
         return
     end
 
-    AuraUtil_ForEachAura(self.unit:GetOMToken(), 'HELPFUL', nil, function(a)
+    local token = self.unit:GetOMToken()
+    if not token then return end
+
+    AuraUtil.ForEachAura(token, 'HELPFUL', nil, function(a)
         local aura = Bastion.Aura:CreateFromUnitAuraInfo(a)
 
         if aura:IsValid() then
@@ -157,7 +173,7 @@ end
 -- Get a units debuffs
 ---@return nil
 function AuraTable:GetUnitDebuffs()
-    if Tinkr.classic or Tinkr.era then
+    if TCX.classic or TCX.era then
         for i = 1, 40 do
             local aura = Bastion.Aura:New(self.unit, i, 'HARMFUL')
 
@@ -184,7 +200,10 @@ function AuraTable:GetUnitDebuffs()
         return
     end
 
-    AuraUtil_ForEachAura(self.unit:GetOMToken(), 'HARMFUL', nil, function(a)
+    local token = self.unit:GetOMToken()
+    if not token then return end
+
+    AuraUtil.ForEachAura(token, 'HARMFUL', nil, function(a)
         local aura = Bastion.Aura:CreateFromUnitAuraInfo(a)
 
         if aura:IsValid() then
@@ -279,7 +298,7 @@ function AuraTable:Find(spell)
             if a:IsUp() then -- Handle expired and non refreshed dropoffs not coming in UNIT_AURA
                 return a
             else
-                if not Tinkr.classic or Tinkr.era then
+                if not TCX.classic or TCX.era then
                     self:RemoveInstanceID(a:GetAuraInstanceID())
                 end
             end
@@ -305,7 +324,7 @@ function AuraTable:FindMy(spell)
             if a:IsUp() then -- Handle expired and non refreshed dropoffs not coming in UNIT_AURA
                 return a
             else
-                if not Tinkr.classic or Tinkr.era then
+                if not TCX.classic or TCX.era then
                     self:RemoveInstanceID(a:GetAuraInstanceID())
                 end
             end
@@ -334,7 +353,7 @@ function AuraTable:FindFrom(spell, source)
                     return a
                 end
             else
-                if not Tinkr.classic or Tinkr.era then
+                if not TCX.classic or TCX.era then
                     self:RemoveInstanceID(a:GetAuraInstanceID())
                 end
             end
@@ -362,7 +381,7 @@ function AuraTable:FindTheirs(spell)
                     return a
                 end
             else
-                if not Tinkr.classic or Tinkr.era then
+                if not TCX.classic or TCX.era then
                     self:RemoveInstanceID(a:GetAuraInstanceID())
                 end
             end

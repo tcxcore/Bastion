@@ -1,5 +1,24 @@
 -- Document with emmy lua: https://emmylua.github.io/
-local Tinkr, Bastion = ...
+local TCX, Bastion = ...
+local _u = Bastion.TCX.Unwrap
+
+local C_UnitAuras = setmetatable({}, { __index = _G.C_UnitAuras })
+if _G.C_UnitAuras then
+    C_UnitAuras.GetAuraDataByIndex = function(unit, index, filter)
+        local info = _G.C_UnitAuras.GetAuraDataByIndex(unit, index, filter)
+        if info then _u(info) end
+        return info
+    end
+end
+
+local _orig_AuraUtil_ForEachAura = _G.AuraUtil_ForEachAura
+local function AuraUtil_ForEachAura(unit, filter, maxCount, func, ...)
+    if not _orig_AuraUtil_ForEachAura then return end
+    _orig_AuraUtil_ForEachAura(unit, filter, maxCount, function(aura)
+        if aura then _u(aura) end
+        return func(aura)
+    end, ...)
+end
 
 -- Create a new Aura class
 ---@class Aura
@@ -10,10 +29,6 @@ function Aura:__index(k)
 
     if response == nil then
         response = rawget(self, k)
-    end
-
-    if response == nil then
-        error("Aura:__index: " .. k .. " does not exist")
     end
 
     return response
@@ -81,7 +96,7 @@ function Aura:New(unit, index, type)
     end
 
     local name, icon, count, dispelType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId,
-        canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = UnitAura(unit:GetOMToken(), index, type)
+    canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = UnitAura(unit:GetOMToken(), index, type)
 
     local self = setmetatable({}, Aura)
     self.aura = {
@@ -115,6 +130,7 @@ end
 ---@param unitAuraInfo UnitAuraInfo
 ---@return Aura
 function Aura:CreateFromUnitAuraInfo(unitAuraInfo)
+    if unitAuraInfo then _u(unitAuraInfo) end
     local self = setmetatable({}, Aura)
     self.aura = {
         name = unitAuraInfo.name,

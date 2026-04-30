@@ -1,4 +1,5 @@
-local Tinkr, Bastion = ...
+﻿local _, Bastion = ...
+local TCX = Bastion.TCX
 
 -- Define a Cacheable class
 ---@class Cacheable

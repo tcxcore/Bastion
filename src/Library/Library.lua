@@ -1,4 +1,5 @@
-local Tinkr, Bastion = ...
+local _, Bastion = ...
+local TCX = Bastion.TCX
 
 ---@class Library
 ---@field name string
@@ -69,7 +70,7 @@ function Library:Resolve()
             end
         end
 
-        self.resolved = {self:ResolveExport(default), remaining}
+        self.resolved = { self:ResolveExport(default), remaining }
 
         return self.resolved[1], self.resolved[2]
     end
@@ -101,7 +102,14 @@ function Library:Import(library)
         error("Library " .. library .. " does not exist")
     end
 
-    if not table.contains(self.dependencies, library) then
+    local function contains(t, val)
+        for _, v in pairs(t) do
+            if v == val then return true end
+        end
+        return false
+    end
+
+    if not contains(self.dependencies, library) then
         table.insert(self.dependencies, library)
     end
 

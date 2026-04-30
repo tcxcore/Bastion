@@ -1,4 +1,34 @@
-local Tinkr, Bastion = ...
+local _, Bastion = ...
+local TCX = Bastion.TCX
+local _u = TCX.Unwrap
+
+local C_Spell = setmetatable({}, { __index = _G.C_Spell })
+if _G.C_Spell then
+    C_Spell.GetSpellCooldown = function(spellId)
+        local info = _G.C_Spell.GetSpellCooldown(spellId)
+        if info then _u(info) end
+        return info
+    end
+    C_Spell.GetSpellCharges = function(spellId)
+        local info = _G.C_Spell.GetSpellCharges(spellId)
+        if info then _u(info) end
+        return info
+    end
+end
+
+local _orig_GetSpellCooldown = _G.GetSpellCooldown
+local function GetSpellCooldown(spellId)
+    if not _orig_GetSpellCooldown then return end
+    local start, duration, enabled, modRate = _orig_GetSpellCooldown(spellId)
+    return _u(start), _u(duration), _u(enabled), modRate
+end
+
+local _orig_GetSpellCharges = _G.GetSpellCharges
+local function GetSpellCharges(spellId)
+    if not _orig_GetSpellCharges then return end
+    local charges, maxCharges, chargeStart, chargeDuration, modRate = _orig_GetSpellCharges(spellId)
+    return _u(charges), _u(maxCharges), _u(chargeStart), _u(chargeDuration), modRate
+end
 
 -- Create a new Spell class
 ---@class Spell
@@ -26,9 +56,10 @@ function Spell:__index(k)
         response = rawget(self, k)
     end
 
-    if response == nil then
-        error("Spell:__index: " .. k .. " does not exist")
-    end
+    -- 移除强制报错，允许外部探测（如 obj.ToDebugString）返回 nil
+    -- if response == nil then
+    --     error("Spell:__index: " .. k .. " does not exist")
+    -- end
 
     return response
 end
@@ -201,7 +232,7 @@ end
 ---@return boolean
 function Spell:Cast(unit, condition)
     if condition then
-        if type(condition) == "string" and  not self:EvaluateCondition(condition) then
+        if type(condition) == "string" and not self:EvaluateCondition(condition) then
             return false
         elseif type(condition) == "function" and not condition(self) then
             return false
@@ -220,15 +251,9 @@ function Spell:Cast(unit, condition)
     -- Check if the mouse was looking
     self.wasLooking = IsMouselooking()
 
-    -- if unit:GetOMToken() contains 'nameplate' then we need to use Object wrapper to cast
-    local u = unit:GetOMToken()
-    if type(u) == "string" and string.find(u, 'nameplate') then
-        u = Object(u)
-    end
-
-    -- Cast the spell
-    CastSpellByName(self:GetName(), u)
-    SpellCancelQueuedSpell()
+    -- 施放法术（TCX 环境需要 Unlock 解锁保护函数）
+    TCX.Unlock("CastSpellByName", self:GetName(), unit:GetOMToken())
+    TCX.Unlock("SpellCancelQueuedSpell")
 
     Bastion:Debug("Casting", self)
 
@@ -256,15 +281,9 @@ function Spell:ForceCast(unit)
     -- Check if the mouse was looking
     self.wasLooking = IsMouselooking()
 
-    -- if unit:GetOMToken() contains 'nameplate' then we need to use Object wrapper to cast
-    local u = unit:GetOMToken()
-    if type(u) == "string" and string.find(u, 'nameplate') then
-        u = Object(u)
-    end
-
-    -- Cast the spell
-    CastSpellByName(self:GetName(), u)
-    SpellCancelQueuedSpell()
+    -- 施放法术（TCX 环境需要 Unlock 解锁保护函数）
+    TCX.Unlock("CastSpellByName", self:GetName(), unit:GetOMToken())
+    TCX.Unlock("SpellCancelQueuedSpell")
 
     Bastion:Debug("Casting", self)
 
@@ -303,6 +322,15 @@ function Spell:IsOnCooldown()
         return info and info.duration > 0
     end
     return select(2, GetSpellCooldown(self:GetID())) > 0
+end
+
+-- Check if the spell is currently active (e.g. auto-attack)
+---@return boolean
+function Spell:IsCurrent()
+    if C_Spell.IsCurrentSpell then
+        return _u(C_Spell.IsCurrentSpell(self:GetID()))
+    end
+    return false
 end
 
 -- Check if the spell is usable
@@ -371,9 +399,11 @@ function Spell:Click(x, y, z)
     if type(x) == 'table' then
         x, y, z = x.x, x.y, x.z
     end
-    if IsSpellPending() == 64 then
+    -- IsSpellPending 返回 64 表示法术处于 AOE 等待鼠标选点状态
+    if TCX.Unlock("IsSpellPending") == 64 then
         MouselookStop()
-        Click(x, y, z)
+        -- TCX 使用 ClickPosition 进行 AOE 落点点击
+        TCX.ClickPosition(x, y, z)
         if self:GetWasLooking() then
             MouselookStart()
         end

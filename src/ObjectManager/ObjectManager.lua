@@ -1,4 +1,5 @@
-local Tinkr, Bastion = ...
+local _, Bastion = ...
+local TCX = Bastion.TCX
 
 ---@class ObjectManager
 ---@field _lists table
@@ -75,19 +76,27 @@ function ObjectManager:Refresh()
     self.explosives:clear()
     self:ResetLists()
 
-    local objects = Objects()
+    -- TCX: 使用 TCX.Objects() 枚举对象管理器中的所有对象
+    local objects = TCX.Objects()
 
     for _, object in pairs(objects) do
         self:EnumLists(object)
 
-        if ({ [5] = true,[6] = true,[7] = true })[ObjectType(object)] then
-            local unit = Bastion.UnitManager:GetObject(ObjectGUID(object))
+        -- TCX: ObjectType 返回对象类型（5=Unit, 6=Player, 7=ActivePlayer）
+        if ({ [5] = true, [6] = true, [7] = true })[TCX.ObjectType(object)] then
+            local guid = TCX.ObjectGUID(object)
+            local unit = Bastion.UnitManager:GetObject(guid)
             if not unit then
                 unit = Bastion.Unit:New(object)
                 Bastion.UnitManager:SetObject(unit)
+            else
+                -- 更新指针：每帧 Objects() 返回的指针可能变化
+                unit.unit = object
             end
 
-            if unit:GetID() == 120651 then
+            if not unit:GetOMToken() then
+                -- 对象指针已失效，跳过
+            elseif unit:GetID() == 120651 then
                 self.explosives:push(unit)
             elseif unit:IsPlayer() and (unit:IsInParty() or unit == Bastion.UnitManager['player']) then
                 self.friends:push(unit)

@@ -1,4 +1,5 @@
-local Tinkr, Bastion = ...
+﻿local _, Bastion = ...
+local TCX = Bastion.TCX
 
 -- Create a new Class class
 ---@class Class
@@ -69,6 +70,5 @@ end
 function Class:GetColor()
     return C_ClassColor.GetClassColor(self.class.name)
 end
-
 
 return Class

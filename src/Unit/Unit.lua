@@ -1,4 +1,27 @@
-local Tinkr, Bastion = ...
+local _, Bastion = ...
+local TCX = Bastion.TCX
+local _u = TCX.Unwrap
+
+local _orig_UnitCastingInfo = _G.UnitCastingInfo
+local function UnitCastingInfo(unit)
+    if not _orig_UnitCastingInfo then return end
+    local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, notInterruptible, spellId = _orig_UnitCastingInfo(unit)
+    return name, text, texture, _u(startTimeMS), _u(endTimeMS), _u(isTradeSkill), _u(castID), _u(notInterruptible), _u(spellId)
+end
+
+local _orig_UnitChannelInfo = _G.UnitChannelInfo
+local function UnitChannelInfo(unit)
+    if not _orig_UnitChannelInfo then return end
+    local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, notInterruptible, spellId, numStages = _orig_UnitChannelInfo(unit)
+    return name, text, texture, _u(startTimeMS), _u(endTimeMS), _u(isTradeSkill), _u(notInterruptible), _u(spellId), _u(numStages)
+end
+
+local _orig_GetSpellCooldown = _G.GetSpellCooldown
+local function GetSpellCooldown(spellId)
+    if not _orig_GetSpellCooldown then return end
+    local start, duration, enabled, modRate = _orig_GetSpellCooldown(spellId)
+    return _u(start), _u(duration), _u(enabled), modRate
+end
 
 -- Create a new Unit class
 ---@class Unit
@@ -29,9 +52,10 @@ function Unit:__index(k)
         response = rawget(self, k)
     end
 
-    if response == nil then
-        error("Unit:__index: " .. k .. " does not exist")
-    end
+    -- 移除强制报错，允许外部安全地检测方法是否存在（例如 if unit.ToDebugString then...）
+    -- if response == nil then
+    --     error("Unit:__index: " .. k .. " does not exist")
+    -- end
 
     return response
 end
@@ -40,7 +64,13 @@ end
 ---@param other Unit
 ---@return boolean
 function Unit:__eq(other)
-    return UnitIsUnit(self:GetOMToken(), other.unit)
+    if not other or type(other) ~= "table" or not other.GetGUID then return false end
+    local guid1 = self:GetGUID()
+    local guid2 = other:GetGUID()
+    if guid1 and guid2 then
+        return guid1 == guid2
+    end
+    return false
 end
 
 -- tostring
@@ -87,7 +117,7 @@ end
 -- Get the units name
 ---@return string
 function Unit:GetName()
-    return UnitName(self:GetOMToken())
+    return TCX.ObjectName(self:GetOMToken())
 end
 
 -- Get the units GUID
@@ -99,13 +129,13 @@ end
 -- Get the units health
 ---@return number
 function Unit:GetHealth()
-    return UnitHealth(self:GetOMToken())
+    return TCX.ObjectHealth(self:GetOMToken())
 end
 
 -- Get the units max health
 ---@return number
 function Unit:GetMaxHealth()
-    return UnitHealthMax(self:GetOMToken())
+    return TCX.ObjectMaxHealth(self:GetOMToken())
 end
 
 -- Get the units health percentage
@@ -141,38 +171,37 @@ end
 -- Get the units power type
 ---@return number
 function Unit:GetPowerType()
-    return UnitPowerType(self:GetOMToken())
+    return _u(UnitPowerType(self:GetOMToken()))
 end
 
 -- Get the units power
 ---@param powerType number | nil
 ---@return number
 function Unit:GetPower(powerType)
-    local powerType = powerType or self:GetPowerType()
-    return UnitPower(self:GetOMToken(), powerType)
+    return _u(UnitPower(self:GetOMToken(), powerType))
 end
 
 -- Get the units max power
 ---@param powerType number | nil
 ---@return number
 function Unit:GetMaxPower(powerType)
-    local powerType = powerType or self:GetPowerType()
-    return UnitPowerMax(self:GetOMToken(), powerType)
+    return _u(UnitPowerMax(self:GetOMToken(), powerType))
 end
 
 -- Get the units power percentage
 ---@param powerType number | nil
 ---@return number
 function Unit:GetPP(powerType)
-    local powerType = powerType or self:GetPowerType()
-    return self:GetPower(powerType) / self:GetMaxPower(powerType) * 100
+    local cur = self:GetPower(powerType)
+    local max = self:GetMaxPower(powerType)
+    if max == 0 then return 0 end
+    return cur / max * 100
 end
 
 -- Get the units power deficit
 ---@param powerType number | nil
 ---@return number
 function Unit:GetPowerDeficit(powerType)
-    local powerType = powerType or self:GetPowerType()
     return self:GetMaxPower(powerType) - self:GetPower(powerType)
 end
 
@@ -187,6 +216,7 @@ end
 ---@param unit Unit
 ---@return number
 function Unit:GetDistance(unit)
+    unit = unit or Bastion.UnitManager['player']
     local pself = self:GetPosition()
     local punit = unit:GetPosition()
 
@@ -202,7 +232,7 @@ end
 -- Is the unit alive
 ---@return boolean
 function Unit:IsAlive()
-    return not UnitIsDeadOrGhost(self:GetOMToken())
+    return not self:IsDead()
 end
 
 -- Is the unit a pet
@@ -226,7 +256,7 @@ end
 -- Is the unit a hostile unit
 ---@return boolean
 function Unit:IsHostile()
-    return UnitCanAttack(self:GetOMToken(), 'player')
+    return UnitCanAttack(self:GetOMToken(), "player")
 end
 
 -- Is the unit a boss
@@ -238,7 +268,6 @@ function Unit:IsBoss()
 
     for i = 1, 5 do
         local bossGUID = UnitGUID("boss" .. i)
-
         if self:GetGUID() == bossGUID then
             return true
         end
@@ -247,13 +276,20 @@ function Unit:IsBoss()
     return false
 end
 
----@return string
+---@return string|nil
 function Unit:GetOMToken()
     if not self.unit then
-        return "none"
+        return nil
     end
-    return self.unit:unit()
+    -- 字符串 token（"player", "target" 等）直接返回
+    if type(self.unit) == "string" then
+        return self.unit
+    end
+    -- lightuserdata 指针通过 ObjectToken 转换为原生 token
+    return ObjectToken(self.unit)
 end
+
+
 
 -- Is the unit a target
 ---@return boolean
@@ -341,42 +377,20 @@ local losFlag = bit.bor(0x1, 0x10, 0x100000)
 ---@param unit Unit
 ---@return boolean
 function Unit:CanSee(unit)
-    -- mechagon smoke cloud
-    -- local mechagonID = 2097
-    -- local smokecloud = 298602
+    local ax, ay, az = TCX.ObjectPosition(self:GetOMToken())
+    -- 用物理边界半径近似头部高度（替代 GetUnitAttachmentPosition）
+    local ah = TCX.ObjectBoundingRadius(self:GetOMToken()) or 1.0
+    local tx, ty, tz = TCX.ObjectPosition(unit:GetOMToken())
+    local th = TCX.ObjectBoundingRadius(unit:GetOMToken()) or 1.0
 
-    -- local name, instanceType, difficultyID, difficultyName, maxPlayers, dynamicDifficulty, isDynamic, instanceID, instanceGroupSize, LfgDungeonID =
-    -- GetInstanceInfo()
-
-    -- otherUnit = otherUnit and otherUnit or "player"
-    -- if instanceID == 2097 then
-    --     if (self:debuff(smokecloud, unit) and not self:debuff(smokecloud, otherUnit))
-    --         or (self:debuff(smokecloud, otherUnit) and not self:debuff(smokecloud, unit))
-    --     then
-    --         return false
-    --     end
-    -- end
-    local ax, ay, az = ObjectPosition(self:GetOMToken())
-    local ah = ObjectHeight(self:GetOMToken())
-    local attx, atty, attz = GetUnitAttachmentPosition(unit:GetOMToken(), 34)
-
-    if not attx or not ax then
-        return false
-    end
-
-    if not ah then
-        return false
-    end
-
-    if (ax == 0 and ay == 0 and az == 0) or (attx == 0 and atty == 0 and attz == 0) then
+    if not ax or not tx then return false end
+    if (ax == 0 and ay == 0 and az == 0) or (tx == 0 and ty == 0 and tz == 0) then
         return true
     end
 
-    if not attx or not ax then
-        return false
-    end
-
-    local x, y, z = TraceLine(ax, ay, az + ah, attx, atty, attz, losFlag)
+    -- TCX TraceLine：无碰撞返回终点，有碰撞返回碰撞点
+    -- 经 TCXAdapter 转换后：无碰撞返回 0,0,0（与 TCX 语义一致）
+    local x, y, z = TraceLine(ax, ay, az + ah, tx, ty, tz + th, losFlag)
     if x ~= 0 or y ~= 0 or z ~= 0 then
         return false
     else
@@ -431,12 +445,10 @@ end
 -- Get the end time of the cast or channel
 ---@return number
 function Unit:GetCastingOrChannelingEndTime()
-    local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, notInterruptible, spellId = UnitCastingInfo(
-        self:GetOMToken())
+    local name, text, texture, startTimeMS, endTimeMS = UnitCastingInfo(self:GetOMToken())
 
     if not name then
-        name, text, texture, startTimeMS, endTimeMS, isTradeSkill, notInterruptible, spellId = UnitChannelInfo(self
-            :GetOMToken())
+        name, text, texture, startTimeMS, endTimeMS = UnitChannelInfo(self:GetOMToken())
     end
 
     if name then
@@ -462,6 +474,13 @@ end
 ---@param unit Unit
 ---@return boolean
 function Unit:CanAttack(unit)
+    unit = unit or Bastion.UnitManager['player']
+    if self:IsUnit("player") then
+        return UnitCanAttack("player", unit:GetOMToken())
+    elseif unit:IsUnit("player") then
+        return UnitCanAttack(self:GetOMToken(), "player")
+    end
+    -- Fallback对于两个都需要mouseover指针的情况可能不准，但一般只用来判player
     return UnitCanAttack(self:GetOMToken(), unit:GetOMToken())
 end
 
@@ -488,12 +507,13 @@ end
 -- Check if unit is interruptible
 ---@return boolean
 function Unit:IsInterruptible()
-    local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, notInterruptible, spellId = UnitCastingInfo(
-        self:GetOMToken())
+    local token = self:GetOMToken()
+    if not token then return false end
+
+    local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, notInterruptible, spellId = UnitCastingInfo(token)
 
     if not name then
-        name, text, texture, startTimeMS, endTimeMS, isTradeSkill, notInterruptible, spellId = UnitChannelInfo(self
-            :GetOMToken())
+        name, text, texture, startTimeMS, endTimeMS, isTradeSkill, notInterruptible, spellId = UnitChannelInfo(token)
     end
 
     if name then
@@ -584,32 +604,24 @@ end
 -- Is moving
 ---@return boolean
 function Unit:IsMoving()
-    return GetUnitSpeed(self:GetOMToken()) > 0
+    return TCX.ObjectSpeed(self:GetOMToken()) > 0
 end
 
 -- Is moving at all
 ---@return boolean
 function Unit:IsMovingAtAll()
-    return ObjectMovementFlag(self:GetOMToken()) ~= 0
+    return TCX.ObjectMovementFlag(self:GetOMToken()) ~= 0
 end
 
 ---@param unit Unit | nil
 ---@return number
 function Unit:GetComboPoints(unit)
-    if Tinkr.classic or Tinkr.era then
-        if not unit then
-            return 0
-        end
-        return GetComboPoints(self:GetOMToken(), unit:GetOMToken())
-    end
+    -- TCX 为 Retail 专属，无 classic/era 模式
     return UnitPower(self:GetOMToken(), 4)
 end
 
 ---@return number
 function Unit:GetComboPointsMax()
-    if Tinkr.classic or Tinkr.era then
-        return 5
-    end
     return UnitPowerMax(self:GetOMToken(), 4)
 end
 
@@ -617,9 +629,6 @@ end
 ---@param unit Unit | nil
 ---@return number
 function Unit:GetComboPointsDeficit(unit)
-    if Tinkr.classic or Tinkr.era then
-        return self:GetComboPointsMax() - self:GetComboPoints(unit)
-    end
     return self:GetComboPointsMax() - self:GetComboPoints()
 end
 
@@ -627,15 +636,25 @@ end
 ---@param unit Unit
 ---@return boolean
 function Unit:IsUnit(unit)
-    return UnitIsUnit(self:GetOMToken(), unit and unit:GetOMToken() or 'none')
+    if not unit then return false end
+    if type(unit) == "string" then
+        return UnitIsUnit(self:GetOMToken(), unit)
+    end
+    return self == unit
 end
 
 -- IsTanking
 ---@param unit Unit
 ---@return boolean
 function Unit:IsTanking(unit)
-    local isTanking, status, threatpct, rawthreatpct, threatvalue = UnitDetailedThreatSituation(self:GetOMToken(),
-        unit:GetOMToken())
+    if self:IsUnit("player") then
+        local isTanking = UnitDetailedThreatSituation("player", unit:GetOMToken())
+        return isTanking
+    elseif type(unit) == "table" and unit.IsUnit and unit:IsUnit("player") then
+        local isTanking = UnitDetailedThreatSituation(self:GetOMToken(), "player")
+        return isTanking
+    end
+    local isTanking = UnitDetailedThreatSituation(self:GetOMToken(), unit and unit:GetOMToken() or 'none')
     return isTanking
 end
 
@@ -993,37 +1012,45 @@ end
 -- ismounted
 ---@return boolean
 function Unit:IsMounted()
-    return UnitIsMounted(self.unit)
+    return TCX.ObjectIsMounted(self:GetOMToken())
 end
 
 -- isindoors
 ---@return boolean
 function Unit:IsOutdoors()
-    return ObjectIsOutdoors(self.unit)
+    -- WoW 原生 IsOutdoors() 仅对本地玩家有效
+    if self:GetOMToken() == "player" then
+        if IsOutdoors then
+            return IsOutdoors()
+        end
+        return true -- API 不存在时默认室外
+    end
+    return true -- 非玩家单位暂时默认室外
 end
 
 -- IsIndoors
 ---@return boolean
 function Unit:IsIndoors()
-    return not ObjectIsOutdoors(self.unit)
+    return not self:IsOutdoors()
 end
 
 -- IsSubmerged
 ---@return boolean
 function Unit:IsSubmerged()
-    return ObjectIsSubmerged(self.unit)
+    -- TODO: TCX 暂无对应 API
+    return false
 end
 
 -- IsDry
 ---@return boolean
 function Unit:IsDry()
-    return not ObjectIsSubmerged(self.unit)
+    return not self:IsSubmerged()
 end
 
 -- The unit stagger amount
 ---@return number
 function Unit:GetStagger()
-    return UnitStagger(self:GetOMToken())
+    return UnitStagger(self:GetOMToken()) or 0
 end
 
 -- The percent of health the unit is currently staggering
@@ -1093,9 +1120,8 @@ function Unit:GetAngle(Target)
     local sp = self:GetPosition()
     local tp = Target:GetPosition()
 
-    local an = Tinkr.Common.GetAnglesBetweenPositions(sp.x, sp.y, sp.z, tp.x, tp.y, tp.z)
-
-    return an
+    -- 替代 TCX.Common.GetAnglesBetweenPositions
+    return math.atan2(tp.y - sp.y, tp.x - sp.x)
 end
 
 function Unit:GetFacing()
@@ -1128,7 +1154,7 @@ end
 function Unit:GetEmpoweredStage()
     local stage = 0
     local _, _, _, startTime, _, _, _, spellID, _, numStages = UnitChannelInfo(self:GetOMToken())
-   
+
     if numStages and numStages > 0 then
         startTime = startTime / 1000
         local currentTime = GetTime()

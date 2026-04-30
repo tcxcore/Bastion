@@ -1,6 +1,5 @@
-local Tinkr, Bastion = ...
-
-local ObjectManager = Tinkr.Util.ObjectManager
+local _, Bastion = ...
+local TCX = Bastion.TCX
 
 local Unit = Bastion.Unit
 
@@ -45,9 +44,9 @@ function UnitManager:__index(k)
     -- end
 
     if self.objects[kguid] == nil then
-        local o = Object(k)
+        local o = TCX.Object(k)
         if o then
-            local unit = Unit:New(Object(k))
+            local unit = Unit:New(k)
             self:SetObject(unit)
         end
     end
@@ -65,7 +64,6 @@ function UnitManager:New()
     return self
 end
 
-
 -- Get or create a unit
 ---@param token string
 ---@return Unit
@@ -80,7 +78,7 @@ function UnitManager:Get(token)
         if token == 'none' then
             self.objects['none'] = Unit:New()
         else
-            self.objects[tguid] = Unit:New(Object(tguid))
+            self.objects[tguid] = Unit:New(token)
         end
     end
 
@@ -91,7 +89,7 @@ function UnitManager:Get(token)
             if token == 'none' then
                 self.objects['none'] = Unit:New()
             else
-                self.objects[tguid] = Unit:New(Object(tguid))
+                self.objects[tguid] = Unit:New(token)
             end
         end
         return self.objects[tguid]

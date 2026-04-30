@@ -1,4 +1,5 @@
-local Tinkr, Bastion = ...
+local _, Bastion = ...
+local TCX = Bastion.TCX
 
 -- Create a new Item class
 ---@class Item
@@ -323,7 +324,8 @@ function Item:IsInRange(unit)
         return true
     end
 
-    local distance = FastDistance(px, py, pz, tx, ty, tz)
+    local dx, dy, dz = px - tx, py - ty, pz - tz
+    local distance = math.sqrt(dx * dx + dy * dy + dz * dz)
 
     if Itemmax
         and distance >= Itemmin
