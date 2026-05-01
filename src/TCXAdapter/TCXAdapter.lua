@@ -35,20 +35,14 @@ ObjectRotation                       = function(o) return TCX.ObjectRotation(o) 
 ObjectCombatReach                    = function(o) return TCX.ObjectCombatReach(o) end
 ObjectMovementFlag                   = function(o) return TCX.ObjectMovementFlag(o) end
 ObjectID                             = function(o) return TCX.ObjectId(o) end
--- Bastion 中的 ObjectHeight 用物理边界半径近似
-ObjectHeight                         = function(o) return TCX.ObjectBoundingRadius(o) or 1.0 end
+ObjectHeight                         = function(o) return TCX.ObjectHeight(o) end
 
 -- ----------------------------------------------------------
--- 室外/水下判断
--- WoW 原生 IsOutdoors() 无参数，仅对本地玩家有效
--- 其他单位暂无可用 API → TODO 占位
+-- 状态判断 API
 -- ----------------------------------------------------------
-ObjectIsOutdoors                     = function(o)
-    return IsOutdoors and IsOutdoors() or true
-end
-ObjectIsSubmerged                    = function(o)
-    return false
-end
+ObjectIsOutdoors                     = function(o) return TCX.ObjectIsOutdoors(o) end
+ObjectIsSubmerged                    = function(o) return TCX.ObjectIsSubmerged(o) end
+ObjectLootable                       = function(o) return TCX.ObjectLootable(o) end
 
 -- ----------------------------------------------------------
 -- TraceLine 语义转换

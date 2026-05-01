@@ -1018,14 +1018,7 @@ end
 -- isindoors
 ---@return boolean
 function Unit:IsOutdoors()
-    -- WoW 原生 IsOutdoors() 仅对本地玩家有效
-    if self:GetOMToken() == "player" then
-        if IsOutdoors then
-            return IsOutdoors()
-        end
-        return true -- API 不存在时默认室外
-    end
-    return true -- 非玩家单位暂时默认室外
+    return TCX.ObjectIsOutdoors(self:GetOMToken())
 end
 
 -- IsIndoors
@@ -1037,8 +1030,19 @@ end
 -- IsSubmerged
 ---@return boolean
 function Unit:IsSubmerged()
-    -- TODO: TCX 暂无对应 API
-    return false
+    return TCX.ObjectIsSubmerged(self:GetOMToken())
+end
+
+-- IsLootable
+---@return boolean
+function Unit:IsLootable()
+    return TCX.ObjectLootable(self:GetOMToken())
+end
+
+-- GetHeight
+---@return number
+function Unit:GetHeight()
+    return TCX.ObjectHeight(self:GetOMToken())
 end
 
 -- IsDry

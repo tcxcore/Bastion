@@ -48,6 +48,7 @@ function UnitManager:__index(k)
         if o then
             local unit = Unit:New(k)
             self:SetObject(unit)
+            return unit
         end
     end
 
