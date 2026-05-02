@@ -99,39 +99,41 @@ function APLActor:Execute()
         end
     end
     if self:GetActor().apl then
-        if self:GetActor().condition and self:GetActor().condition() then
+        if not self:GetActor().condition or self:GetActor().condition() then
             -- print("Bastion: APL:Execute: Executing sub APL " .. self:GetActor().apl.name)
-            self:GetActor().apl:Execute()
+            return self:GetActor().apl:Execute()
         end
     end
     if self:GetActor().spell then
         if self:GetActor().condition then
             -- print("Bastion: APL:Execute: Condition for spell " .. self:GetActor().spell:GetName())
-            self:GetActor().spell:CastableIf(self:GetActor().castableFunc):OnCast(self:GetActor().onCastFunc):Cast(
+            return self:GetActor().spell:CastableIf(self:GetActor().castableFunc):OnCast(self:GetActor().onCastFunc):Cast(
                 self:GetActor().target, self:GetActor().condition)
         else
             -- print("Bastion: APL:Execute: No condition for spell " .. self:GetActor().spell:GetName())
-            self:GetActor().spell:CastableIf(self:GetActor().castableFunc):OnCast(self:GetActor().onCastFunc):Cast(
+            return self:GetActor().spell:CastableIf(self:GetActor().castableFunc):OnCast(self:GetActor().onCastFunc):Cast(
                 self:GetActor().target)
         end
     end
     if self:GetActor().item then
         if self:GetActor().condition then
             -- print("Bastion: APL:Execute: Condition for spell " .. self:GetActor().spell:GetName())
-            self:GetActor().item:UsableIf(self:GetActor().usableFunc):Use(self:GetActor().target,
+            return self:GetActor().item:UsableIf(self:GetActor().usableFunc):Use(self:GetActor().target,
                 self:GetActor().condition)
         else
             -- print("Bastion: APL:Execute: No condition for spell " .. self:GetActor().spell:GetName())
-            self:GetActor().item:UsableIf(self:GetActor().usableFunc):Use(self:GetActor().target)
+            return self:GetActor().item:UsableIf(self:GetActor().usableFunc):Use(self:GetActor().target)
         end
     end
     if self:GetActor().action then
         -- print("Bastion: APL:Execute: Executing action " .. self:GetActor().action)
-        self:GetActor().cb(self)
+        local result = self:GetActor().cb(self)
+        return result == true
     end
     if self:GetActor().variable then
         -- print("Bastion: APL:Execute: Setting variable " .. self:GetActor().variable)
         self:GetActor()._apl.variables[self:GetActor().variable] = self:GetActor().cb(self:GetActor()._apl)
+        return false -- setting variables doesn't break the APL flow
     end
     return false
 end
@@ -266,18 +268,20 @@ function APL:AddAPL(apl, condition)
 end
 
 -- Execute the APL
+---@return boolean
 function APL:Execute()
     for _, actor in ipairs(self.apl) do
         if actor:HasTraits() then
             if actor:Evaluate() and actor:Execute() then
-                break
+                return true
             end
         else
             if actor:Execute() then
-                break
+                return true
             end
         end
     end
+    return false
 end
 
 -- Add a Sequencer to the APL

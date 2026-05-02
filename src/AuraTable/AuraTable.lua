@@ -113,7 +113,13 @@ function AuraTable:AddOrUpdateAuraInstanceID(instanceID, aura)
 
     self.instanceIDLookup[instanceID] = spellId
 
-    if Bastion.UnitManager['player']:IsUnit(aura:GetSource()) then
+    local source = aura:GetSource()
+    local isPlayer = aura:GetCastByPlayer()
+    if not isPlayer and source and source:IsValid() then
+        isPlayer = Bastion.UnitManager['player']:IsUnit(source)
+    end
+
+    if isPlayer then
         if not self.playerAuras[spellId] then
             self.playerAuras[spellId] = {}
         end

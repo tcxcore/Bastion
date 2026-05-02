@@ -73,6 +73,53 @@ Locale:Register("zhCN", {
     ["Library %s not found"]                                = "模块库 %s 未找到",
     ["Library %s has no exports"]                           = "模块库 %s 没有导出任何内容",
     ["Library %s does not exist"]                           = "模块库 %s 不存在",
+
+    -- ============================================================
+    -- UI 系统
+    -- ============================================================
+    ["Control Panel"]           = "控制面板",
+    ["Module Management"]       = "模块管理",
+    ["Module Settings"]         = "模块设置",
+    ["Select Module"]           = "选择模块",
+    ["Enable Module"]           = "启用模块",
+    ["Open Settings"]           = "打开设置",
+    ["No settings available"]   = "无可用设置",
+    ["Module Info"]             = "模块信息",
+    ["Module"]                  = "模块",
+    ["Status"]                  = "状态",
+    ["Settings Count"]          = "设置项数量",
+    ["Settings"]                = "设置",
+    ["Back"]                    = "返回",
+    ["Reset to Default"]        = "恢复默认",
+    ["Settings reset to default"] = "设置已恢复为默认值",
+
+    -- 快捷键提示
+    ["Toggle on/off"]           = "切换开关",
+    ["Toggle UI panel"]         = "切换界面",
+    ["Toggle current module"]   = "切换当前模块",
+    ["Left-Click"]              = "左键点击",
+    ["Right-Click"]             = "右键点击",
+    ["Toggle Bastion on/off"]   = "切换 Bastion 开关",
+
+    -- UI 初始化
+    ["UI system initialized"]   = "UI 系统已初始化",
+    ["Config loaded"]           = "配置已加载",
+    ["Config saved"]            = "配置已保存",
+    ["Missing dependency: AbstractFramework"] = "缺失依赖项：AbstractFramework",
+    ["Please download it from:"]              = "请前往此处下载：",
+
+    -- 框架设置页
+    ["Framework Settings"]                  = "框架设置",
+    ["Hotkey Settings"]                     = "快捷键设置",
+    ["General Settings"]                    = "通用设置",
+    ["Modifier"]                            = "修饰键",
+    ["Key"]                                 = "按键",
+    ["Debug Mode"]                          = "调试模式",
+    ["Debug mode enabled"]                  = "调试模式已启用",
+    ["Debug mode disabled"]                 = "调试模式已禁用",
+    ["Click button then press key combo"]   = "点击按钮后按下组合键进行录制",
+    ["Press key combo..."]                  = "请按下组合键...",
+    ["Hotkey updated"]                      = "快捷键已更新",
 })
 
 return Locale

@@ -438,7 +438,7 @@ end
 function Spell:GetRange()
     if C_Spell.GetSpellInfo then
         local info = C_Spell.GetSpellInfo(self:GetID())
-        return info and info.minRange or nil, info and info.maxRange or nil
+        return info and info.maxRange or nil, info and info.minRange or nil
     end
     local name, rank, icon, castTime, minRange, maxRange, spellID, originalIcon = GetSpellInfo(self:GetID())
     return maxRange, minRange
@@ -456,8 +456,12 @@ function Spell:IsInRange(unit)
         return true
     end
 
-    if inRange == 1 then
+    if inRange == 1 or inRange == true then
         return true
+    end
+    
+    if inRange == 0 or inRange == false then
+        return false
     end
 
     return Bastion.UnitManager['player']:InMelee(unit)

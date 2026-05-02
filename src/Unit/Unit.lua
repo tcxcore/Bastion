@@ -117,7 +117,7 @@ end
 -- Get the units name
 ---@return string
 function Unit:GetName()
-    return TCX.ObjectName(self:GetOMToken())
+    return TCX.ObjectName(self:GetPointer())
 end
 
 -- Get the units GUID
@@ -129,13 +129,13 @@ end
 -- Get the units health
 ---@return number
 function Unit:GetHealth()
-    return TCX.ObjectHealth(self:GetOMToken())
+    return TCX.ObjectHealth(self:GetPointer())
 end
 
 -- Get the units max health
 ---@return number
 function Unit:GetMaxHealth()
-    return TCX.ObjectMaxHealth(self:GetOMToken())
+    return TCX.ObjectMaxHealth(self:GetPointer())
 end
 
 -- Get the units health percentage
@@ -208,7 +208,7 @@ end
 -- Get the units position
 ---@return Vector3
 function Unit:GetPosition()
-    local x, y, z = ObjectPosition(self:GetOMToken())
+    local x, y, z = ObjectPosition(self:GetPointer())
     return Bastion.Vector3:New(x, y, z)
 end
 
@@ -289,6 +289,11 @@ function Unit:GetOMToken()
     return ObjectToken(self.unit)
 end
 
+-- Get the units memory pointer
+---@return userdata|lightuserdata|nil
+function Unit:GetPointer()
+    return self.unit
+end
 
 
 -- Is the unit a target
@@ -377,11 +382,11 @@ local losFlag = bit.bor(0x1, 0x10, 0x100000)
 ---@param unit Unit
 ---@return boolean
 function Unit:CanSee(unit)
-    local ax, ay, az = TCX.ObjectPosition(self:GetOMToken())
+    local ax, ay, az = TCX.ObjectPosition(self:GetPointer())
     -- 用物理边界半径近似头部高度（替代 GetUnitAttachmentPosition）
-    local ah = TCX.ObjectBoundingRadius(self:GetOMToken()) or 1.0
-    local tx, ty, tz = TCX.ObjectPosition(unit:GetOMToken())
-    local th = TCX.ObjectBoundingRadius(unit:GetOMToken()) or 1.0
+    local ah = TCX.ObjectBoundingRadius(self:GetPointer()) or 1.0
+    local tx, ty, tz = TCX.ObjectPosition(unit:GetPointer())
+    local th = TCX.ObjectBoundingRadius(unit:GetPointer()) or 1.0
 
     if not ax or not tx then return false end
     if (ax == 0 and ay == 0 and az == 0) or (tx == 0 and ty == 0 and tz == 0) then
@@ -604,13 +609,13 @@ end
 -- Is moving
 ---@return boolean
 function Unit:IsMoving()
-    return TCX.ObjectSpeed(self:GetOMToken()) > 0
+    return TCX.ObjectSpeed(self:GetPointer()) > 0
 end
 
 -- Is moving at all
 ---@return boolean
 function Unit:IsMovingAtAll()
-    return TCX.ObjectMovementFlag(self:GetOMToken()) ~= 0
+    return TCX.ObjectMovementFlag(self:GetPointer()) ~= 0
 end
 
 ---@param unit Unit | nil
@@ -662,9 +667,9 @@ end
 ---@param unit Unit
 ---@return boolean
 function Unit:IsFacing(unit)
-    local rot = ObjectRotation(self:GetOMToken())
-    local x, y, z = ObjectPosition(self:GetOMToken())
-    local x2, y2, z2 = ObjectPosition(unit:GetOMToken())
+    local rot = ObjectRotation(self:GetPointer())
+    local x, y, z = ObjectPosition(self:GetPointer())
+    local x2, y2, z2 = ObjectPosition(unit:GetPointer())
 
     if not x or not x2 or not rot then
         return false
@@ -680,13 +685,24 @@ function Unit:IsFacing(unit)
     return math.abs(angle) < 90
 end
 
+-- Face
+---@param unit? Unit
+---@return boolean
+function Unit:Face(unit)
+    if unit then
+        return TCX.FaceObject(unit:GetPointer())
+    else
+        return TCX.FaceObject(self:GetPointer())
+    end
+end
+
 -- IsBehind
 ---@param unit Unit
 ---@return boolean
 function Unit:IsBehind(unit)
-    local rot = ObjectRotation(unit:GetOMToken())
-    local x, y, z = ObjectPosition(unit:GetOMToken())
-    local x2, y2, z2 = ObjectPosition(self:GetOMToken())
+    local rot = ObjectRotation(unit:GetPointer())
+    local x, y, z = ObjectPosition(unit:GetPointer())
+    local x2, y2, z2 = ObjectPosition(self:GetPointer())
 
     if not x or not x2 then
         return false
@@ -753,7 +769,7 @@ end
 ---@return number
 function Unit:GetID()
     if self.id then return self.id end
-    self.id = ObjectID(self:GetOMToken())
+    self.id = ObjectID(self:GetPointer())
     return self.id
 end
 
@@ -1012,13 +1028,13 @@ end
 -- ismounted
 ---@return boolean
 function Unit:IsMounted()
-    return TCX.ObjectIsMounted(self:GetOMToken())
+    return TCX.ObjectIsMounted(self:GetPointer())
 end
 
 -- isindoors
 ---@return boolean
 function Unit:IsOutdoors()
-    return TCX.ObjectIsOutdoors(self:GetOMToken())
+    return TCX.ObjectIsOutdoors(self:GetPointer())
 end
 
 -- IsIndoors
@@ -1030,19 +1046,19 @@ end
 -- IsSubmerged
 ---@return boolean
 function Unit:IsSubmerged()
-    return TCX.ObjectIsSubmerged(self:GetOMToken())
+    return TCX.ObjectIsSubmerged(self:GetPointer())
 end
 
 -- IsLootable
 ---@return boolean
 function Unit:IsLootable()
-    return TCX.ObjectLootable(self:GetOMToken())
+    return TCX.ObjectLootable(self:GetPointer())
 end
 
 -- GetHeight
 ---@return number
 function Unit:GetHeight()
-    return TCX.ObjectHeight(self:GetOMToken())
+    return TCX.ObjectHeight(self:GetPointer())
 end
 
 -- IsDry
@@ -1084,7 +1100,7 @@ end
 -- get the units combat reach
 ---@return number
 function Unit:GetCombatReach()
-    return ObjectCombatReach(self:GetOMToken())
+    return ObjectCombatReach(self:GetPointer())
 end
 
 -- Get the units combat distance (distance - combat reach (realized distance))
@@ -1129,7 +1145,7 @@ function Unit:GetAngle(Target)
 end
 
 function Unit:GetFacing()
-    return ObjectRotation(self:GetOMToken()) or 0
+    return ObjectRotation(self:GetPointer()) or 0
 end
 
 -- Check if target is within a arc around the unit (angle, distance) accounting for a rotation of self
@@ -1233,3 +1249,4 @@ end
 -- end
 
 return Unit
+

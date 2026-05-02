@@ -1,0 +1,30 @@
+bastion: 
+  enabled: true
+modules: 
+  DruidInitial: 
+    enabled: true
+    settings: 
+      healThreshold: 40
+  FeralDruid: 
+    enabled: false
+    settings: 
+      aoe_count: 3
+      auto_berserk: true
+      auto_convoke: true
+      auto_interrupt: true
+      barkskin_hp: 65
+      survival_hp: 35
+      tigers_fury_energy: 40
+  GuardianDruid: 
+    enabled: false
+    settings: 
+      aoe_count: 3
+      auto_berserk: true
+      auto_incarnation: true
+      auto_interrupt: true
+      auto_mass_interrupt: true
+      auto_rage_sleeper: true
+      barkskin_hp: 65
+      frenzied_hp: 55
+      ironfur_rage: 40
+      survival_hp: 35

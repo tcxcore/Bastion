@@ -1,0 +1,11 @@
+debugMode: true
+hotkeys: 
+  toggleBastion: 
+    key: 45
+    mod: 0
+  toggleModule: 
+    key: 123
+    mod: 18
+  toggleUI: 
+    key: 122
+    mod: 18

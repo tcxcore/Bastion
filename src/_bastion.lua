@@ -150,6 +150,16 @@ function Bastion.Bootstrap()
     local MODULES = {}
 
     Bastion.Enabled = false
+    Bastion._MODULES = MODULES  -- UI 需要访问模块列表
+
+    -- ============================================================
+    -- 配置管理器 + UI 系统初始化
+    -- ============================================================
+    local ConfigManagerClass = Bastion:Require("~/src/BastionUI/ConfigManager")
+    Bastion.ConfigManager = ConfigManagerClass:New()
+
+    local BastionUIClass = Bastion:Require("~/src/BastionUI/BastionUI")
+    Bastion.UI = BastionUIClass:New()
 
     Bastion.Globals.EventManager:RegisterWoWEvent('UNIT_AURA',
                                                   function(unit, auras)
@@ -173,236 +183,284 @@ function Bastion.Bootstrap()
         end
     end)
 
-    local pguid = UnitGUID("player")
-    local missed = {}
+    -- ============================================================
+    -- 延迟初始化：等待玩家进入游戏世界后再启动 Ticker 和 UI
+    -- 在登录界面时 UnitGUID / UnitAffectingCombat 等 API 不可用
+    -- ============================================================
+    local function InitializeInGame()
+        if not _G.AbstractFramework then
+            print("|cFFFF4444[Bastion]|r " .. (L["Missing dependency: AbstractFramework"] or "缺失依赖项：AbstractFramework"))
+            print("|cFF00FFFF" .. (L["Please download it from:"] or "请前往此处下载：") .. "|r https://www.curseforge.com/wow/addons/abstract-framework")
+            return
+        end
 
-    Bastion.Ticker = C_Timer.NewTicker(0.1, function()
-        -- 12.0 替代机制：通过轮询周围单位的 UnitAffectingCombat 状态来粗略更新战斗时间
-        local t = GetTime()
-        Bastion.UnitManager:EnumUnits(function(unit)
-            if unit and unit:IsAffectingCombat() then
-                unit:SetLastCombatTime(t)
+        local pguid = UnitGUID("player")
+        local missed = {}
+
+        Bastion.Ticker = C_Timer.NewTicker(0.1, function()
+            -- 12.0 替代机制：通过轮询周围单位的 UnitAffectingCombat 状态来粗略更新战斗时间
+            local t = GetTime()
+            Bastion.UnitManager:EnumUnits(function(unit)
+                if unit and unit:IsAffectingCombat() then
+                    unit:SetLastCombatTime(t)
+                end
+            end)
+
+            if not Bastion.CombatTimer:IsRunning() and UnitAffectingCombat("player") then
+                Bastion.CombatTimer:Start()
+            elseif Bastion.CombatTimer:IsRunning() and
+                not UnitAffectingCombat("player") then
+                Bastion.CombatTimer:Reset()
+            end
+
+            if Bastion.Enabled then
+                Bastion.ObjectManager:Refresh()
+                for i = 1, #MODULES do MODULES[i]:Tick() end
+            end
+
+            -- 快捷键轮询
+            if Bastion.UI then
+                Bastion.UI:ProcessHotkeys()
             end
         end)
 
-        if not Bastion.CombatTimer:IsRunning() and UnitAffectingCombat("player") then
-            Bastion.CombatTimer:Start()
-        elseif Bastion.CombatTimer:IsRunning() and
-            not UnitAffectingCombat("player") then
-            Bastion.CombatTimer:Reset()
+        function Bastion:Register(module)
+            table.insert(MODULES, module)
+            Bastion:Print(L["Registered"], module)
         end
 
-        if Bastion.Enabled then
-            Bastion.ObjectManager:Refresh()
-            for i = 1, #MODULES do MODULES[i]:Tick() end
-        end
-    end)
+        -- Find a module by name
+        function Bastion:FindModule(name)
+            for i = 1, #MODULES do
+                if MODULES[i].name == name then return MODULES[i] end
+            end
 
-    function Bastion:Register(module)
-        table.insert(MODULES, module)
-        Bastion:Print("Registered", module)
-    end
-
-    -- Find a module by name
-    function Bastion:FindModule(name)
-        for i = 1, #MODULES do
-            if MODULES[i].name == name then return MODULES[i] end
+            return nil
         end
 
-        return nil
-    end
-
-    function Bastion:Print(...)
-        local args = {...}
-        local str = "|cFFDF362D[Bastion]|r |cFFFFFFFF"
-        for i = 1, #args do str = str .. tostring(args[i]) .. " " end
-        print(str)
-    end
-
-    function Bastion:Debug(...)
-        if not Bastion.DebugMode then return end
-        local args = {...}
-        local str = "|cFFDF6520[Bastion]|r |cFFFFFFFF"
-        for i = 1, #args do str = str .. tostring(args[i]) .. " " end
-        print(str)
-    end
-
-    local Command = Bastion.Command:New('bastion')
-
-    Command:Register('toggle', L['Toggle bastion on/off'], function()
-        Bastion.Enabled = not Bastion.Enabled
-        if Bastion.Enabled then
-            Bastion:Print(L["Enabled"])
-        else
-            Bastion:Print(L["Disabled"])
+        function Bastion:Print(...)
+            local args = {...}
+            local str = "|cFFDF362D[Bastion]|r |cFFFFFFFF"
+            for i = 1, #args do str = str .. tostring(args[i]) .. " " end
+            print(str)
         end
-    end)
 
-    Command:Register('debug', L['Toggle debug mode on/off'], function()
-        Bastion.DebugMode = not Bastion.DebugMode
-        if Bastion.DebugMode then
-            Bastion:Print(L["Debug mode enabled"])
-        else
-            Bastion:Print(L["Debug mode disabled"])
+        function Bastion:Debug(...)
+            if not Bastion.DebugMode then return end
+            local args = {...}
+            local str = "|cFFDF6520[Bastion]|r |cFFFFFFFF"
+            for i = 1, #args do str = str .. tostring(args[i]) .. " " end
+            print(str)
         end
-    end)
 
-    Command:Register('dumpspells', L['Dump spells to a file'], function()
-        local i = 1
-        local rand = math.random(100000, 999999)
-        local BOOKTYPE_SPELL = BOOKTYPE_SPELL or (Enum.SpellBookSpellBank.Player and Enum.SpellBookSpellBank.Player or 'spell')
-        while true do
-            local spellName, spellSubName
+        local Command = Bastion.Command:New('bastion')
 
-            if C_SpellBook.GetSpellBookItemName then
-                spellName, spellSubName = C_SpellBook.GetSpellBookItemName(i, BOOKTYPE_SPELL)
+        Command:Register('toggle', L['Toggle bastion on/off'], function()
+            Bastion.Enabled = not Bastion.Enabled
+            if Bastion.Enabled then
+                Bastion:Print(L["Enabled"])
             else
-                spellName, spellSubName = GetSpellBookItemName(i, BOOKTYPE_SPELL)
+                Bastion:Print(L["Disabled"])
             end
+        end)
 
-            if not spellName then do break end end
-
-            -- use spellName and spellSubName here
-            local spellID
-
-            if C_Spell.GetSpellInfo then
-                local info = C_Spell.GetSpellInfo(spellName)
-                spellID = info.spellID
+        Command:Register('debug', L['Toggle debug mode on/off'], function()
+            Bastion.DebugMode = not Bastion.DebugMode
+            if Bastion.DebugMode then
+                Bastion:Print(L["Debug mode enabled"])
             else
-                spellID = select(7, GetSpellInfo(spellName))
+                Bastion:Print(L["Debug mode disabled"])
             end
+        end)
 
-            if spellID then
-                spellName = spellName:gsub("[%W%s]", "")
-                TCX.WriteFile('bastion-' .. UnitClass('player') .. '-' .. rand ..
-                              '.lua',
-                          "local " .. spellName ..
-                              " = Bastion.Globals.SpellBook:GetSpell(" ..
-                              spellID .. ")\n", true)
+        Command:Register('dumpspells', L['Dump spells to a file'], function()
+            local i = 1
+            local rand = math.random(100000, 999999)
+            local BOOKTYPE_SPELL = BOOKTYPE_SPELL or (Enum.SpellBookSpellBank.Player and Enum.SpellBookSpellBank.Player or 'spell')
+            while true do
+                local spellName, spellSubName
+
+                if C_SpellBook.GetSpellBookItemName then
+                    spellName, spellSubName = C_SpellBook.GetSpellBookItemName(i, BOOKTYPE_SPELL)
+                else
+                    spellName, spellSubName = GetSpellBookItemName(i, BOOKTYPE_SPELL)
+                end
+
+                if not spellName then do break end end
+
+                -- use spellName and spellSubName here
+                local spellID
+
+                if C_Spell.GetSpellInfo then
+                    local info = C_Spell.GetSpellInfo(spellName)
+                    spellID = info.spellID
+                else
+                    spellID = select(7, GetSpellInfo(spellName))
+                end
+
+                if spellID then
+                    spellName = spellName:gsub("[%W%s]", "")
+                    TCX.WriteFile('bastion-' .. UnitClass('player') .. '-' .. rand ..
+                                  '.lua',
+                              "local " .. spellName ..
+                                  " = Bastion.Globals.SpellBook:GetSpell(" ..
+                                  spellID .. ")\n", true)
+                end
+                i = i + 1
             end
-            i = i + 1
-        end
-    end)
+        end)
 
-    Command:Register('module', L['Toggle a module on/off'], function(args)
-        local module = Bastion:FindModule(args[2])
-        if module then
-            module:Toggle()
-            if module.enabled then
-                Bastion:Print(L["Enabled"], module.name)
+        Command:Register('module', L['Toggle a module on/off'], function(args)
+            local module = Bastion:FindModule(args[2])
+            if module then
+                module:Toggle()
+                if module.enabled then
+                    Bastion:Print(L["Enabled"], module.name)
+                else
+                    Bastion:Print(L["Disabled"], module.name)
+                end
             else
-                Bastion:Print(L["Disabled"], module.name)
+                Bastion:Print(L["Module not found"])
             end
-        else
-            Bastion:Print(L["Module not found"])
+        end)
+
+        Command:Register('mplus', L['Toggle m+ module on/off'], function(args)
+            local cmd = args[2]
+            if cmd == 'debuffs' then
+                Bastion.MythicPlusUtils:ToggleDebuffLogging()
+                Bastion:Print(L["Debuff logging"], Bastion.MythicPlusUtils
+                                  .debuffLogging and L["enabled"] or L["disabled"])
+                return
+            end
+
+            if cmd == 'casts' then
+                Bastion.MythicPlusUtils:ToggleCastLogging()
+                Bastion:Print(L["Cast logging"],
+                              Bastion.MythicPlusUtils.castLogging and L["enabled"] or
+                                  L["disabled"])
+                return
+            end
+
+            Bastion:Print(L["[MythicPlusUtils] Unknown command"])
+            Bastion:Print(L["Available commands:"])
+            Bastion:Print(L["debuffs"])
+            Bastion:Print(L["casts"])
+        end)
+
+        Command:Register('missed', L['Dump the list of immune kidney shot spells'],
+                         function()
+            for k, v in pairs(missed) do Bastion:Print(k) end
+        end)
+
+        Command:Register('ui', L['Toggle UI panel'], function()
+            if Bastion.UI then
+                Bastion.UI:Toggle()
+            end
+        end)
+
+        ---@param library Library
+        function Bastion:RegisterLibrary(library)
+            LIBRARIES[library.name] = library
         end
-    end)
 
-    Command:Register('mplus', L['Toggle m+ module on/off'], function(args)
-        local cmd = args[2]
-        if cmd == 'debuffs' then
-            Bastion.MythicPlusUtils:ToggleDebuffLogging()
-            Bastion:Print(L["Debuff logging"], Bastion.MythicPlusUtils
-                              .debuffLogging and L["enabled"] or L["disabled"])
-            return
-        end
-
-        if cmd == 'casts' then
-            Bastion.MythicPlusUtils:ToggleCastLogging()
-            Bastion:Print(L["Cast logging"],
-                          Bastion.MythicPlusUtils.castLogging and L["enabled"] or
-                              L["disabled"])
-            return
-        end
-
-        Bastion:Print(L["[MythicPlusUtils] Unknown command"])
-        Bastion:Print(L["Available commands:"])
-        Bastion:Print(L["debuffs"])
-        Bastion:Print(L["casts"])
-    end)
-
-    Command:Register('missed', L['Dump the list of immune kidney shot spells'],
-                     function()
-        for k, v in pairs(missed) do Bastion:Print(k) end
-    end)
-
-    ---@param library Library
-    function Bastion:RegisterLibrary(library)
-        LIBRARIES[library.name] = library
-    end
-
-    function Bastion:CheckLibraryDependencies()
-        for k, v in pairs(LIBRARIES) do
-            if v.dependencies then
-                for i = 1, #v.dependencies do
-                    local dep = v.dependencies[i]
-                    if LIBRARIES[dep] then
-                        if LIBRARIES[dep].dependencies then
-                            for j = 1, #LIBRARIES[dep].dependencies do
-                                if LIBRARIES[dep].dependencies[j] == v.name then
-                                    Bastion:Print(
-                                        "Circular dependency detected between " ..
-                                            v.name .. " and " .. dep)
-                                    return false
+        function Bastion:CheckLibraryDependencies()
+            for k, v in pairs(LIBRARIES) do
+                if v.dependencies then
+                    for i = 1, #v.dependencies do
+                        local dep = v.dependencies[i]
+                        if LIBRARIES[dep] then
+                            if LIBRARIES[dep].dependencies then
+                                for j = 1, #LIBRARIES[dep].dependencies do
+                                    if LIBRARIES[dep].dependencies[j] == v.name then
+                                        Bastion:Print(
+                                            "Circular dependency detected between " ..
+                                                v.name .. " and " .. dep)
+                                        return false
+                                    end
                                 end
                             end
+                        else
+                            Bastion:Print("Library " .. v.name .. " depends on " ..
+                                              dep .. " but it's not registered")
+                            return false
                         end
-                    else
-                        Bastion:Print("Library " .. v.name .. " depends on " ..
-                                          dep .. " but it's not registered")
-                        return false
                     end
                 end
             end
+
+            return true
         end
 
-        return true
-    end
+        function Bastion:Import(library)
+            local lib = self:GetLibrary(library)
 
-    function Bastion:Import(library)
-        local lib = self:GetLibrary(library)
+            if not lib then error("Library " .. library .. " not found") end
 
-        if not lib then error("Library " .. library .. " not found") end
-
-        return lib:Resolve()
-    end
-
-    function Bastion:GetLibrary(name)
-        if not LIBRARIES[name] then
-            error("Library " .. name .. " not found")
+            return lib:Resolve()
         end
 
-        local library = LIBRARIES[name]
+        function Bastion:GetLibrary(name)
+            if not LIBRARIES[name] then
+                error("Library " .. name .. " not found")
+            end
 
-        -- if library.dependencies then
-        --     for i = 1, #library.dependencies do
-        --         local dep = library.dependencies[i]
-        --         if LIBRARIES[dep] then
-        --             if LIBRARIES[dep].dependencies then
-        --                 for j = 1, #LIBRARIES[dep].dependencies do
-        --                     if LIBRARIES[dep].dependencies[j] == library.name then
-        --                         Bastion:Print("Circular dependency detected between " .. library.name .. " and " .. dep)
-        --                         return false
-        --                     end
-        --                 end
-        --             end
-        --         else
-        --             Bastion:Print("Library " .. v.name .. " depends on " .. dep .. " but it's not registered")
-        --             return false
-        --         end
-        --     end
-        -- end
+            local library = LIBRARIES[name]
 
-        return library
+            return library
+        end
+
+        Load("@Libraries/")
+        Load("@Modules/")
+        
+        -- 按职业加载对应的战斗模块文件夹
+        local _, classFilename = UnitClass("player")
+        if classFilename then
+            local classFolderMap = {
+                ["WARRIOR"]     = "Warrior",
+                ["PALADIN"]     = "Paladin",
+                ["HUNTER"]      = "Hunter",
+                ["ROGUE"]       = "Rogue",
+                ["PRIEST"]      = "Priest",
+                ["DEATHKNIGHT"] = "DeathKnight",
+                ["SHAMAN"]      = "Shaman",
+                ["MAGE"]        = "Mage",
+                ["WARLOCK"]     = "Warlock",
+                ["MONK"]        = "Monk",
+                ["DRUID"]       = "Druid",
+                ["DEMONHUNTER"] = "DemonHunter",
+                ["EVOKER"]      = "Evoker"
+            }
+            local folder = classFolderMap[classFilename]
+            if folder then
+                Load("@" .. folder .. "/")
+            end
+        end
+
+        -- 加载配置并初始化 UI
+        if Bastion.ConfigManager then
+            local savedEnabled = Bastion.ConfigManager:LoadAll(MODULES)
+            Bastion.Enabled = savedEnabled
+            Bastion:Print(L["Config loaded"])
+        end
+
+        if Bastion.UI then
+            Bastion.UI:Init()
+        end
     end
 
-    -- if not Bastion:CheckLibraryDependencies() then
-    --     return
-    -- end
-
-    Load("@Libraries/")
-    Load("@Modules/")
-    Load("@")
+    -- 检查是否已在游戏中（TCX 提供的 API）
+    if TCX.IsInGame and TCX.IsInGame() then
+        InitializeInGame()
+    else
+        -- 登录界面：等待 PLAYER_ENTERING_WORLD 事件再初始化
+        local waitFrame = CreateFrame("Frame")
+        waitFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+        waitFrame:SetScript("OnEvent", function(self, event)
+            self:UnregisterEvent("PLAYER_ENTERING_WORLD")
+            self:SetScript("OnEvent", nil)
+            InitializeInGame()
+        end)
+    end
 end
 
 Bastion.Bootstrap()
