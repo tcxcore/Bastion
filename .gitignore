@@ -5,15 +5,16 @@ DS_Store
 ## whitelist .gitkeep files
 !.gitkeep
 
-## ignore all files in scripts
-scripts/*
-!scripts/Libraries
-scripts/Libraries/*
-!scripts/.gitkeep
-!scripts/ExampleModule.lua
-!scripts/Libraries/ExampleLibrary.lua
-!scripts/Libraries/ExampleDependency.lua
-!scripts/Libraries/ExampleDependencyError.lua
+## No longer ignoring scripts
+# scripts/*
+# !scripts/Libraries
+# scripts/Libraries/*
+# !scripts/.gitkeep
+# !scripts/ExampleModule.lua
+# !scripts/Libraries/ExampleLibrary.lua
+# !scripts/Libraries/ExampleDependency.lua
+# !scripts/Libraries/ExampleDependencyError.lua
+
 
 ## ignore vscode settings
 .vscode/*
