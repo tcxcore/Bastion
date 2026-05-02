@@ -44,8 +44,12 @@
 3. 游戏内输入 `/bastion toggle` 启用引擎自动运行
 
 ## 已有脚本
-- `GuardianDruid.lua` - 守护德鲁伊（熊坦）
-- `FeralDruid.lua` - 野性德鲁伊（猫 DPS）
+- **德鲁伊 (Druid)**:
+  - `GuardianDruid.lua` - 守护德鲁伊（熊坦）
+  - `FeralDruid.lua` - 野性德鲁伊（猫 DPS）
+  - `DruidInitial.lua` - 德鲁伊练级脚本
+- **其他全职业初始脚本**:
+  - 涵盖所有其他职业的练级/基础脚本 (例如 `WarriorInitial.lua`, `MageInitial.lua`, `DemonHunterInitial.lua` 等) 均已支持并在对应职业目录下提供。
 
 ## 环境依赖
 - **平台**: TCX-Retail
