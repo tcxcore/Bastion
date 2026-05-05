@@ -238,9 +238,19 @@ function Aura:GetExpirationTime()
 end
 
 -- Get the auras source
----@return Unit
+---@return Unit|nil
 function Aura:GetSource()
-    return Bastion.UnitManager[self.aura.source]
+    local src = self.aura.source
+    if not src then return nil end
+    -- 某些 UnitToken (如 partypet4) 在通过 UnitManager.__index
+    -- → ObjectGUID() → TCX_Probe 处理时，内部可能产生被暴雪
+    -- Taint 系统标记的 secret string, 导致字符串操作报错
+    -- 使用 pcall 保护避免崩溃
+    local ok, unit = pcall(function()
+        return Bastion.UnitManager[src]
+    end)
+    if ok then return unit end
+    return nil
 end
 
 -- Get the auras stealable status
