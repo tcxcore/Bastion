@@ -230,10 +230,21 @@ local function GetWintersChillStacks()
     return 0
 end
 
---- 检查范围内敌人数量
+--- 检查玩家周围敌人数量
+--- 注意: 使用 EnumUnits (遍历所有敌方单位) 而非 EnumEnemies (仅遍历 activeEnemies)
+--- activeEnemies 需要 InCombatOdds>80, 可能漏掉大量怪物
+---@param range number
 ---@return number
-local function GetEnemyCount()
-    return Target:GetEnemies(10)
+local function GetEnemyCount(range)
+    range = range or 10
+    local count = 0
+    Bastion.UnitManager:EnumUnits(function(unit)
+        if unit:IsAlive() and unit:IsEnemy() and Player:GetDistance(unit) <= range then
+            count = count + 1
+        end
+        return false
+    end)
+    return count
 end
 
 -- ======================================================================
@@ -314,7 +325,7 @@ M:Sync(function()
     -- ==================================================================
     local useCDs = M:GetSetting("useCooldowns")
     local useAOE = M:GetSetting("useAOE")
-    local enemyCount = GetEnemyCount()
+    local enemyCount = GetEnemyCount(10)
 
     -- 冰冷血脉 (主爆发)
     if useCDs and IcyVeins:IsKnownAndUsable() then
@@ -406,10 +417,10 @@ M:Sync(function()
     end
 
     -- ==================================================================
-    -- AOE 循环 (多目标 >= N 个敌人时)
+    -- AOE 循环 (多目标 >= N 个敌人时, 提前到单体填充之前)
     -- ==================================================================
     if useAOE and enemyCount >= M:GetSetting("aoeTargets") then
-        -- 暴风雪 (大面积AOE)
+        -- 暴风雪 (大面积AOE, 多目标时优先级最高)
         if not Player:IsMoving() and Blizzard:IsKnownAndUsable() then
             if Blizzard:Cast(Target) then
                 -- 暴风雪是AOE落点技能，需要点击地面
