@@ -399,8 +399,8 @@ function Spell:Click(x, y, z)
     if type(x) == 'table' then
         x, y, z = x.x, x.y, x.z
     end
-    -- IsSpellPending 返回 64 表示法术处于 AOE 等待鼠标选点状态
-    if TCX.Unlock("IsSpellPending") == 64 then
+    -- SpellIsTargeting() 返回 true 表示法术处于 AOE 等待鼠标选点状态
+    if SpellIsTargeting() then
         MouselookStop()
         -- TCX 使用 ClickPosition 进行 AOE 落点点击
         TCX.ClickPosition(x, y, z)

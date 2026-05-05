@@ -276,9 +276,10 @@ function Item:Click(x, y, z)
     if type(x) == 'table' then
         x, y, z = x.x, x.y, x.z
     end
-    if IsSpellPending() == 64 then
+    -- SpellIsTargeting() 返回 true 表示法术处于 AOE 等待鼠标选点状态
+    if SpellIsTargeting() then
         MouselookStop()
-        Click(x, y, z)
+        TCX.ClickPosition(x, y, z)
         if self:GetWasLooking() then
             MouselookStart()
         end
