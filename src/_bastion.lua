@@ -163,9 +163,13 @@ function Bastion.Bootstrap()
 
     Bastion.Globals.EventManager:RegisterWoWEvent('UNIT_AURA',
                                                   function(unit, auras)
-        local u = Bastion.UnitManager[unit]
-
-        if u then u:GetAuras():OnUpdate(auras) end
+        -- UNIT_AURA 事件的 unit 参数 (如 partypet3) 可能被暴雪
+        -- Taint 系统标记为 secret string, 传入 UnitManager.__index
+        -- → ObjectGUID() 时触发字符串操作报错, 用 pcall 保护
+        local ok, u = pcall(function()
+            return Bastion.UnitManager[unit]
+        end)
+        if ok and u then u:GetAuras():OnUpdate(auras) end
     end)
 
     Bastion.Globals.EventManager:RegisterWoWEvent("UNIT_SPELLCAST_SUCCEEDED",
