@@ -230,8 +230,8 @@ local function GetWintersChillStacks()
     return 0
 end
 
---- 检查玩家周围敌人数量
---- 注意: 使用 EnumUnits (遍历所有敌方单位) 而非 EnumEnemies (仅遍历 activeEnemies)
+--- 检查目标附近敌人数量 (以目标为中心, AOE 落点判断)
+--- 使用 EnumUnits (遍历所有敌方单位) 而非 EnumEnemies (仅遍历 activeEnemies)
 --- activeEnemies 需要 InCombatOdds>80, 可能漏掉大量怪物
 ---@param range number
 ---@return number
@@ -239,7 +239,7 @@ local function GetEnemyCount(range)
     range = range or 10
     local count = 0
     Bastion.UnitManager:EnumUnits(function(unit)
-        if unit:IsAlive() and unit:IsEnemy() and Player:GetDistance(unit) <= range then
+        if unit:IsAlive() and unit:IsEnemy() and Target:GetDistance(unit) <= range then
             count = count + 1
         end
         return false
