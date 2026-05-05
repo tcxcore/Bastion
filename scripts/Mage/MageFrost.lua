@@ -241,9 +241,7 @@ end
 -- ======================================================================
 
 M:Sync(function()
-    -- 非战斗状态跳过
-    if not Player:IsAffectingCombat() and not Player:IsCastingOrChanneling() then return end
-    -- 正在引导/施法中跳过 (但不跳过瞬发窗口)
+    -- 正在施法中跳过 (等待当前施法完成)
     if Player:IsCasting() then return end
     -- 引导中允许冰枪术穿插，但不执行其他操作
     if Player:IsChanneling() then
