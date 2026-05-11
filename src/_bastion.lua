@@ -266,6 +266,10 @@ function Bastion.Bootstrap()
             else
                 Bastion:Print(L["Disabled"])
             end
+            if Bastion.UI then
+                Bastion.UI:UpdateStatusBar()
+                Bastion.UI:SaveFrameworkConfig()
+            end
         end)
 
         Command:Register('debug', L['Toggle debug mode on/off'], function()
@@ -274,6 +278,9 @@ function Bastion.Bootstrap()
                 Bastion:Print(L["Debug mode enabled"])
             else
                 Bastion:Print(L["Debug mode disabled"])
+            end
+            if Bastion.UI then
+                Bastion.UI:SaveFrameworkConfig()
             end
         end)
 
@@ -413,37 +420,75 @@ function Bastion.Bootstrap()
             return library
         end
 
-        Load("@Libraries/")
-        Load("@Modules/")
+        -- 动态按版本加载对应目录的脚本
+        local function LoadVersionScripts(subFolder)
+            -- 例如: scripts/Bastion/scripts/Retail/Libraries
+            local specificPath = 'scripts/Bastion/scripts/' .. Bastion.Build .. '/' .. subFolder
+            
+            -- 加载版本专属文件夹
+            if TCX.DirectoryExists(specificPath) then
+                Load("@" .. Bastion.Build .. "/" .. subFolder .. "/")
+            end
+        end
+
+        LoadVersionScripts("Libraries")
+        LoadVersionScripts("Modules")
         
         -- 按职业加载对应的战斗模块文件夹
         local _, classFilename = UnitClass("player")
         if classFilename then
-            local classFolderMap = {
-                ["WARRIOR"]     = "Warrior",
-                ["PALADIN"]     = "Paladin",
-                ["HUNTER"]      = "Hunter",
-                ["ROGUE"]       = "Rogue",
-                ["PRIEST"]      = "Priest",
-                ["DEATHKNIGHT"] = "DeathKnight",
-                ["SHAMAN"]      = "Shaman",
-                ["MAGE"]        = "Mage",
-                ["WARLOCK"]     = "Warlock",
-                ["MONK"]        = "Monk",
-                ["DRUID"]       = "Druid",
-                ["DEMONHUNTER"] = "DemonHunter",
-                ["EVOKER"]      = "Evoker"
-            }
+            local classFolderMap = {}
+            if Bastion.Build == "TBC" then
+                classFolderMap = {
+                    ["WARRIOR"]     = "Warrior",
+                    ["PALADIN"]     = "Paladin",
+                    ["HUNTER"]      = "Hunter",
+                    ["ROGUE"]       = "Rogue",
+                    ["PRIEST"]      = "Priest",
+                    ["SHAMAN"]      = "Shaman",
+                    ["MAGE"]        = "Mage",
+                    ["WARLOCK"]     = "Warlock",
+                    ["DRUID"]       = "Druid"
+                }
+            elseif Bastion.Build == "Titan" then
+                classFolderMap = {
+                    ["WARRIOR"]     = "Warrior",
+                    ["PALADIN"]     = "Paladin",
+                    ["HUNTER"]      = "Hunter",
+                    ["ROGUE"]       = "Rogue",
+                    ["PRIEST"]      = "Priest",
+                    ["DEATHKNIGHT"] = "DeathKnight",
+                    ["SHAMAN"]      = "Shaman",
+                    ["MAGE"]        = "Mage",
+                    ["WARLOCK"]     = "Warlock",
+                    ["DRUID"]       = "Druid"
+                }
+            else
+                classFolderMap = {
+                    ["WARRIOR"]     = "Warrior",
+                    ["PALADIN"]     = "Paladin",
+                    ["HUNTER"]      = "Hunter",
+                    ["ROGUE"]       = "Rogue",
+                    ["PRIEST"]      = "Priest",
+                    ["DEATHKNIGHT"] = "DeathKnight",
+                    ["SHAMAN"]      = "Shaman",
+                    ["MAGE"]        = "Mage",
+                    ["WARLOCK"]     = "Warlock",
+                    ["MONK"]        = "Monk",
+                    ["DRUID"]       = "Druid",
+                    ["DEMONHUNTER"] = "DemonHunter",
+                    ["EVOKER"]      = "Evoker"
+                }
+            end
             local folder = classFolderMap[classFilename]
             if folder then
-                Load("@" .. folder .. "/")
+                LoadVersionScripts(folder)
             end
         end
 
         -- 加载配置并初始化 UI
         if Bastion.ConfigManager then
-            local savedEnabled = Bastion.ConfigManager:LoadAll(MODULES)
-            Bastion.Enabled = savedEnabled
+            Bastion.ConfigManager:LoadAll(MODULES)
             Bastion:Print(L["Config loaded"])
         end
 

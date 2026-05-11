@@ -1,6 +1,6 @@
-# Bastion - TCX-Retail 适配版
+# Bastion - TCX-Retail/TCX Core 适配版
 
-基于 [4n0n/Bastion](https://git.tinkr.site/4n0n/bastion) 框架，完整适配 TCX-Retail 内存直接交互架构。
+基于 [4n0n/Bastion](https://git.tinkr.site/4n0n/bastion) 框架，完整适配 TCX-Retail/TCX Core 内存直接交互架构。
 
 ## TCX 适配变更
 
@@ -27,10 +27,9 @@
 | `Locale/` | 增加多语言翻译文本支持模块 |
 
 ### 最新更新 (v1.x)
-- **UI & 配置系统**：移除了硬编码的模块配置，现在提供集成的图形界面与状态保存。
-- **安全初始化**：修复了在角色选择界面加载可能引起的空引用崩溃，强制等待 `PLAYER_ENTERING_WORLD` 或 `IsInGame()` 为 true 时初始化。
-- **防御性防错(Bulletproof)**：加强了 `Spell`, `AuraTable`, `Unit` 的 `nil` 防护。推荐在技能释放和逻辑判定中使用防御性写法。
-- **文档扩充**：新增了 `docs/Combat_Routine_Guide.md` 和 `docs/LuaAPI_Reference.md` 指南。
+- **多版本客户端支持**：重构了脚本目录层级，现在支持按 `Retail`、`Titan` 和 `TBC` 客户端版本独立加载对应的战斗循环模块 (`scripts/<版本>/<职业>/`)。
+- **底层内存检索优化**：全面升级了 `Unit`, `ObjectManager`, `TCXAdapter` 的底层交互，大幅提升了 `ObjectToken`、`ObjectGUID` 及交互接口在复杂战斗环境中的运行性能。
+- **配置系统 (JSON) 升级**：废弃了 `YAML` 格式，全面采用更加规范的 `JSON` 持久化方案。现在每一个战斗循环模块均会独立生成对应名称的 `.json` 配置文件，全局开关和界面热键则整合入 `framework.json`。
 
 
 ### 脚本层规范
@@ -44,14 +43,13 @@
 3. 游戏内输入 `/bastion toggle` 启用引擎自动运行
 
 ## 已有脚本
-- **德鲁伊 (Druid)**:
-  - `GuardianDruid.lua` - 守护德鲁伊（熊坦）
-  - `FeralDruid.lua` - 野性德鲁伊（猫 DPS）
-  - `DruidInitial.lua` - 德鲁伊练级脚本
-- **其他全职业初始脚本**:
-  - 涵盖所有其他职业的练级/基础脚本 (例如 `WarriorInitial.lua`, `MageInitial.lua`, `DemonHunterInitial.lua` 等) 均已支持并在对应职业目录下提供。
+所有职业均已经按客户端版本 (Retail / Titan / TBC) 进行了分类拆解。如：
+- `scripts/Titan/DeathKnight/DeathKnightInitial.lua`
+- `scripts/TBC/Mage/MageInitial.lua`
+- `scripts/Retail/Druid/GuardianDruid.lua`
+等各类专精或练级战斗脚本。
 
 ## 环境依赖
 - **平台**: TCX-Retail
-- **游戏版本**: WoW Retail 12.0.5
-- **底层 API**: `ObjectToken()`, `TCX.Objects()`, `TCX.Unlock()` 等
+- **游戏版本**: WoW Retail 12.0.5 / WoW Titan / WoW TBC
+- **底层 API**: `ObjectToken()`, `TCX.Objects()`, `TCX.TraceLine()` 等

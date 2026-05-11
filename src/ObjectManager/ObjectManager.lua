@@ -116,8 +116,8 @@ return ObjectManager
 
 -- -- Register a list of objects that are training dummies
 -- local dummies = Bastion.ObjectManager:RegisterList('dummies', function(object)
---     if ObjectType(object) == 5 or ObjectType(object) == 6 then
---         local unit = Bastion.UnitManager:GetObject(ObjectGUID(object))
+--     if TCX.ObjectType(object) == 5 or TCX.ObjectType(object) == 6 then
+--         local unit = Bastion.UnitManager:GetObject(TCX.ObjectGUID(object))
 
 --         if not unit then
 --             unit = Bastion.Unit:New(object)

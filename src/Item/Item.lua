@@ -305,10 +305,10 @@ end
 function Item:IsInRange(unit)
     local name, rank, icon, UseTime, Itemmin, Itemmax, ItemID = GetItemInfo(self:GetID())
 
-    local them = Object(unit:GetOMToken())
+    local them = TCX.Object(unit:GetOMToken())
 
-    local tx, ty, tz = ObjectPosition(unit:GetOMToken())
-    local px, py, pz = ObjectPosition('player')
+    local tx, ty, tz = TCX.ObjectPosition(unit:GetOMToken())
+    local px, py, pz = TCX.ObjectPosition('player')
 
     if not them then
         return false
@@ -318,8 +318,8 @@ function Item:IsInRange(unit)
         return true
     end
 
-    local combatReach = ObjectCombatReach("player")
-    local themCombatReach = ObjectCombatReach(unit:GetOMToken())
+    local combatReach = TCX.ObjectCombatReach("player")
+    local themCombatReach = TCX.ObjectCombatReach(unit:GetOMToken())
 
     if Bastion.UnitManager['player']:InMelee(unit) and Itemmin == 0 then
         return true

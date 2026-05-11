@@ -132,6 +132,9 @@ function BastionUI:Init()
         if cfg and cfg.debugMode ~= nil then
             Bastion.DebugMode = cfg.debugMode
         end
+        if cfg and cfg.bastionEnabled ~= nil then
+            Bastion.Enabled = cfg.bastionEnabled
+        end
     end
 
     self:CreateMinimapButton()
@@ -159,6 +162,7 @@ function BastionUI:CreateMinimapButton()
                     Bastion:Print(L["Disabled"])
                 end
                 self:UpdateStatusBar()
+                self:SaveFrameworkConfig()
             end
         end,
         function(tt)
@@ -688,6 +692,7 @@ function BastionUI:SaveFrameworkConfig()
         Bastion.ConfigManager:SaveFrameworkSettings({
             hotkeys = self.hotkeys,
             debugMode = Bastion.DebugMode or false,
+            bastionEnabled = Bastion.Enabled or false
         })
     end
 end
@@ -715,6 +720,7 @@ function BastionUI:ProcessHotkeys()
         end
         self:UpdateStatusBar()
         self:SaveConfig()
+        self:SaveFrameworkConfig()
     end)
 
     self:_CheckHotkey("toggleUI", function()

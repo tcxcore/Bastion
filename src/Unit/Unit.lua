@@ -105,7 +105,7 @@ end
 -- Check if the unit exists
 ---@return boolean
 function Unit:Exists()
-    return Object(self:GetOMToken())
+    return TCX.Object(self:GetOMToken())
 end
 
 -- Get the units token
@@ -123,7 +123,7 @@ end
 -- Get the units GUID
 ---@return string
 function Unit:GetGUID()
-    return ObjectGUID(self:GetOMToken())
+    return TCX.ObjectGUID(self:GetOMToken())
 end
 
 -- Get the units health
@@ -208,7 +208,7 @@ end
 -- Get the units position
 ---@return Vector3
 function Unit:GetPosition()
-    local x, y, z = ObjectPosition(self:GetPointer())
+    local x, y, z = TCX.ObjectPosition(self:GetPointer())
     return Bastion.Vector3:New(x, y, z)
 end
 
@@ -286,7 +286,7 @@ function Unit:GetOMToken()
         return self.unit
     end
     -- lightuserdata 指针通过 ObjectToken 转换为原生 token
-    return ObjectToken(self.unit)
+    return TCX.ObjectToken(self.unit)
 end
 
 -- Get the units memory pointer
@@ -369,7 +369,6 @@ function Unit:GetRawUnit()
     return self:GetOMToken()
 end
 
-local isClassicWow = select(4, GetBuildInfo()) < 40000
 
 -- Check if two units are in melee
 -- function Unit:InMelee(unit)
@@ -383,19 +382,16 @@ local losFlag = bit.bor(0x1, 0x10, 0x100000)
 ---@return boolean
 function Unit:CanSee(unit)
     local ax, ay, az = TCX.ObjectPosition(self:GetPointer())
-    -- 用物理边界半径近似头部高度（替代 GetUnitAttachmentPosition）
-    local ah = TCX.ObjectBoundingRadius(self:GetPointer()) or 1.0
+    local ah = TCX.ObjectHeight(self:GetPointer()) or 1.0
     local tx, ty, tz = TCX.ObjectPosition(unit:GetPointer())
-    local th = TCX.ObjectBoundingRadius(unit:GetPointer()) or 1.0
+    local th = TCX.ObjectHeight(unit:GetPointer()) or 1.0
 
     if not ax or not tx then return false end
     if (ax == 0 and ay == 0 and az == 0) or (tx == 0 and ty == 0 and tz == 0) then
         return true
     end
 
-    -- TCX TraceLine：无碰撞返回终点，有碰撞返回碰撞点
-    -- 经 TCXAdapter 转换后：无碰撞返回 0,0,0（与 TCX 语义一致）
-    local x, y, z = TraceLine(ax, ay, az + ah, tx, ty, tz + th, losFlag)
+    local x, y, z = TCX.TraceLine(ax, ay, az + ah, tx, ty, tz + th, losFlag)
     if x ~= 0 or y ~= 0 or z ~= 0 then
         return false
     else
@@ -621,7 +617,9 @@ end
 ---@param unit Unit | nil
 ---@return number
 function Unit:GetComboPoints(unit)
-    -- TCX 为 Retail 专属，无 classic/era 模式
+    if GetComboPoints then
+        return GetComboPoints(self:GetOMToken(), unit and unit:GetOMToken() or "target")
+    end
     return UnitPower(self:GetOMToken(), 4)
 end
 
@@ -667,9 +665,9 @@ end
 ---@param unit Unit
 ---@return boolean
 function Unit:IsFacing(unit)
-    local rot = ObjectRotation(self:GetPointer())
-    local x, y, z = ObjectPosition(self:GetPointer())
-    local x2, y2, z2 = ObjectPosition(unit:GetPointer())
+    local rot = TCX.ObjectRotation(self:GetPointer())
+    local x, y, z = TCX.ObjectPosition(self:GetPointer())
+    local x2, y2, z2 = TCX.ObjectPosition(unit:GetPointer())
 
     if not x or not x2 or not rot then
         return false
@@ -700,9 +698,9 @@ end
 ---@param unit Unit
 ---@return boolean
 function Unit:IsBehind(unit)
-    local rot = ObjectRotation(unit:GetPointer())
-    local x, y, z = ObjectPosition(unit:GetPointer())
-    local x2, y2, z2 = ObjectPosition(self:GetPointer())
+    local rot = TCX.ObjectRotation(unit:GetPointer())
+    local x, y, z = TCX.ObjectPosition(unit:GetPointer())
+    local x2, y2, z2 = TCX.ObjectPosition(self:GetPointer())
 
     if not x or not x2 then
         return false
@@ -744,15 +742,15 @@ end
 ---@param unit Unit
 ---@return boolean
 function Unit:InMelee(unit)
-    local x, y, z = ObjectPosition(self.unit)
-    local x2, y2, z2 = ObjectPosition(unit.unit)
+    local x, y, z = TCX.ObjectPosition(self.unit)
+    local x2, y2, z2 = TCX.ObjectPosition(unit.unit)
 
     if not x or not x2 then
         return false
     end
 
-    local scr = ObjectCombatReach(self.unit)
-    local ucr = ObjectCombatReach(unit.unit)
+    local scr = TCX.ObjectCombatReach(self.unit)
+    local ucr = TCX.ObjectCombatReach(unit.unit)
 
     if not scr or not ucr then
         return false
@@ -769,7 +767,7 @@ end
 ---@return number
 function Unit:GetID()
     if self.id then return self.id end
-    self.id = ObjectID(self:GetPointer())
+    self.id = TCX.ObjectId(self:GetPointer())
     return self.id
 end
 
@@ -1100,7 +1098,7 @@ end
 -- get the units combat reach
 ---@return number
 function Unit:GetCombatReach()
-    return ObjectCombatReach(self:GetPointer())
+    return TCX.ObjectCombatReach(self:GetPointer())
 end
 
 -- Get the units combat distance (distance - combat reach (realized distance))
@@ -1195,7 +1193,7 @@ end
 -- Bastion.EventManager:RegisterWoWEvent("UNIT_SPELLCAST_EMPOWER_START", function(...)
 --     local unit, unk, id = ...
 --     if not unit then return end
---     local guid = ObjectGUID(unit)
+--     local guid = TCX.ObjectGUID(unit)
 --     if not guid then return end
 --     empowering[guid] = -1
 -- end)
@@ -1203,7 +1201,7 @@ end
 -- Bastion.EventManager:RegisterWoWEvent("UNIT_SPELLCAST_EMPOWER_STOP", function(...)
 --     local unit, unk, id = ...
 --     if not unit then return end
---     local guid = ObjectGUID(unit)
+--     local guid = TCX.ObjectGUID(unit)
 --     if not guid then return end
 --     empowering[guid] = -1
 -- end)

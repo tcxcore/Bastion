@@ -667,7 +667,7 @@ TCX 的对象 API 全面支持 **多态传参**，所有接受 `obj` 的参数�
   -- 检查视线和实体碰撞
   local hitFlags = bit.bor(0x1, 0x10, 0x100, 0x100000)
   local cx, cy, cz = C_Timer.TCX.TraceLine(px, py, pz, tx, ty, tz, hitFlags)
-  -- cx, cy, cz 为最终返回的探测点
+  -- cx, cy, cz 为最终返回的探测点,无碰撞时返回0,0,0
   ```
 
 ### `SetHeading(facing)`

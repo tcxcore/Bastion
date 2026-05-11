@@ -92,6 +92,9 @@ function Aura:New(unit, index, type)
 
     if C_UnitAuras.GetAuraDataByIndex then
         local unitAuraInfo = C_UnitAuras.GetAuraDataByIndex(unit:GetOMToken(), index, type)
+        if not unitAuraInfo then
+            return Aura:New(nil)
+        end
         return Aura:CreateFromUnitAuraInfo(unitAuraInfo)
     end
 
