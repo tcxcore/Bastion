@@ -20,8 +20,7 @@ local SpellBook = Bastion.SpellBook:New()
 local AutoAttack    = SpellBook:GetSpell(6603)    -- 自动攻击
 local Frostbolt     = SpellBook:GetSpell(116)     -- 寒冰箭 (填充法术)
 local IceLance      = SpellBook:GetSpell(30455)   -- 冰枪术 (即时/冰手指消耗)
-local Flurry        = SpellBook:GetSpell(44614)   -- 冰霜碎裂/急速射击 (消耗碎裂BUFF)
-local FrostfireEmpowered = SpellBook:GetSpell(431178) -- 霜火增效 (预留: 霜火天赋路线)
+local Flurry        = SpellBook:GetSpell(44614)   -- 冰风暴/冰霜碎裂 (消耗碎裂BUFF)
 
 -- 引导/AOE 法术
 local RayOfFrost    = SpellBook:GetSpell(205021)  -- 冰霜射线 (引导法术)
@@ -47,7 +46,8 @@ local ShiftingPower = SpellBook:GetSpell(382440)  -- 变换之力 (引导, 减CD
 local Counterspell  = SpellBook:GetSpell(2139)    -- 法术反制 (打断)
 local AlterTime     = SpellBook:GetSpell(342245)  -- 操控时间 (位置/血量回溯)
 local TimeWarp      = SpellBook:GetSpell(80353)   -- 时间扭曲 (嗜血/英勇)
-local DeepFreeze    = SpellBook:GetSpell(378760)  -- 深寒凝冰 (预留: 控制技能手动使用)
+local IceCold       = SpellBook:GetSpell(378760)  -- 深寒凝冰 (被动天赋，修改寒冰屏障)
+local Supernova     = SpellBook:GetSpell(157980)  -- 超级新星 (控制/AOE)
 local Blink         = SpellBook:GetSpell(1953)    -- 闪光术 (预留: 位移技能手动使用)
 local IceFloes      = SpellBook:GetSpell(108839)  -- 寒冰流 (移动施法, 天赋)
 
@@ -58,10 +58,11 @@ local FingersOfFrostBuff = SpellBook:GetSpell(44544)   -- 冰手指 BUFF
 local BrainFreezeBuff    = SpellBook:GetSpell(190446)  -- 碎裂 / 急冻大脑 BUFF
 local IciclesBuff        = SpellBook:GetSpell(205473)  -- 冰锥层数 BUFF (冰川尖刺前置)
 local IcyVeinsBuff       = IcyVeins                   -- 冰冷血脉 BUFF (与技能共享SpellID)
+local GlacialSpikebuff   = SpellBook:GetSpell(1222865) -- 冰川尖刺 BUFF (自定义)
 local WintersChillDebuff = SpellBook:GetSpell(228358)  -- 凛冬之寒 DEBUFF (碎裂后目标上)
+local FreezingDebuff     = SpellBook:GetSpell(1221389) -- 冻结 DEBUFF (碎裂被动产生)
 local FreezingWindsBuff  = SpellBook:GetSpell(382106)  -- 凝冻之风 BUFF (预留: 天赋追踪)
 local DeathsChillBuff    = SpellBook:GetSpell(454391)  -- 死亡之寒 BUFF (预留: 天赋追踪)
-local FrostfireBoltBuff  = SpellBook:GetSpell(431177)  -- 霜火箭 BUFF (预留: 霜火天赋路线)
 local AlterTimeBuff      = SpellBook:GetSpell(342246)  -- 操控时间激活 BUFF
 local IceFloesBuff       = SpellBook:GetSpell(108839)  -- 寒冰流 BUFF
 local TemporalDisplacement = SpellBook:GetSpell(80354) -- 时间位移 (时间扭曲疲劳DEBUFF)
@@ -75,6 +76,10 @@ local M = Bastion.Module:New("MageFrost")
 M:SetDisplayName("Frost Mage", "冰霜法师")
 
 M:DefineSettings({
+    { type = "header", label = "== Core Talent Requirements ==", labelZh = "== 核心推荐/必要天赋需求 ==" },
+    { type = "header", label = "Required: Spellslinger, Ray of Frost, Glacial Spike", labelZh = "※ 核心必要天赋: 疾咒师(英雄天赋)、冰霜射线、冰川尖刺" },
+    { type = "header", label = "Optional: Ice Cold, Supernova", labelZh = "※ 可选辅助天赋: 深寒凝冰、超级新星" },
+
     { type = "header", label = "== General ==", labelZh = "== 通用设置 ==" },
     {
         type = "toggle",
@@ -117,17 +122,24 @@ M:DefineSettings({
     {
         type = "toggle",
         key = "useIceBlock",
-        label = "Use Ice Block",
-        labelZh = "使用寒冰屏障",
-        default = false
+        label = "Use Ice Block / Ice Cold",
+        labelZh = "使用寒冰屏障 / 深寒凝冰",
+        default = true
     },
     {
         type = "slider",
         key = "iceBlockHP",
-        label = "Ice Block HP (%)",
-        labelZh = "寒冰屏障血量阈值 (%)",
+        label = "Ice Block/Cold HP (%)",
+        labelZh = "冰箱/深寒血量阈值 (%)",
         min = 0, max = 100, step = 5,
-        default = 15
+        default = 25
+    },
+    {
+        type = "toggle",
+        key = "useSupernova",
+        label = "Use Supernova (AOE)",
+        labelZh = "使用超级新星(控制/AOE)",
+        default = true
     },
     { type = "header", label = "== Interrupt ==", labelZh = "== 打断设置 ==" },
     {
@@ -186,7 +198,8 @@ M:DefineSettings({
 local function GetFingersOfFrostStacks()
     local aura = Player:GetAuras():FindMy(FingersOfFrostBuff)
     if aura:IsUp() then
-        return aura:GetCount()
+        local count = aura:GetCount()
+        return count > 0 and count or 1
     end
     return 0
 end
@@ -213,19 +226,12 @@ local function HasIcyVeins()
     return Player:GetAuras():FindMy(IcyVeinsBuff):IsUp()
 end
 
---- 检查目标是否有凛冬之寒
----@return boolean
-local function HasWintersChill()
-    return Target:GetAuras():FindMy(WintersChillDebuff):IsUp()
-end
-
---- 获取凛冬之寒剩余层数
+--- 获取冻结(1221389)剩余层数
 ---@return number
-local function GetWintersChillStacks()
-    local aura = Target:GetAuras():FindMy(WintersChillDebuff)
+local function GetFreezingStacks()
+    local aura = Target:GetAuras():FindAny(FreezingDebuff)
     if aura:IsUp() then
-        local count = aura:GetCount()
-        return count > 0 and count or 1
+        return aura:GetCount()
     end
     return 0
 end
@@ -254,19 +260,8 @@ end
 M:Sync(function()
     -- 正在施法中跳过 (等待当前施法完成)
     if Player:IsCasting() then return end
-    -- 引导中允许冰枪术穿插，但不执行其他操作
-    if Player:IsChanneling() then
-        -- 引导冰霜射线时，如果有冰手指触发，可以穿插冰枪术
-        if Target:IsValid() and not Target:IsDead() and Target:IsEnemy() then
-            local channelingSpell = Player:GetCastingOrChannelingSpell()
-            if channelingSpell and channelingSpell:GetID() == RayOfFrost:GetID() then
-                if GetFingersOfFrostStacks() >= 2 then
-                    if IceLance:IsInRange(Target) and IceLance:Cast(Target) then return end
-                end
-            end
-        end
-        return
-    end
+    -- 正在引导中跳过 (绝对不能打断冰霜射线的引导)
+    if Player:IsChanneling() then return end
 
     -- 目标验证
     if not Target:IsValid() or Target:IsDead() or not Target:IsEnemy() then return end
@@ -291,7 +286,8 @@ M:Sync(function()
     -- 防御/自保逻辑
     -- ==================================================================
 
-    -- 寒冰屏障 (紧急保命)
+    -- 寒冰屏障 / 深寒凝冰 (紧急保命)
+    -- 注意: 深寒凝冰是被动天赋，实际施放的技能仍然是寒冰屏障(45438)
     if M:GetSetting("useIceBlock") and Player:GetHP() <= M:GetSetting("iceBlockHP") then
         if IceBlock:IsKnownAndUsable() then
             if IceBlock:Cast(Player) then return end
@@ -348,34 +344,31 @@ M:Sync(function()
     -- 核心输出循环
     -- ==================================================================
 
-    -- [优先级1] 冰川尖刺 - 5层冰锥时释放
-    -- 冰川尖刺是最高优先级大招，5层冰锥就放
-    if GetIciclesCount() >= 5 and GlacialSpike:IsKnownAndUsable() then
-        if not Player:IsMoving() and GlacialSpike:IsInRange(Target) then
+    -- [优先级1] 冰川尖刺 - 必须拥有大冰刺高亮Buff(5层冰锥)时才释放
+    if GetIciclesCount() >= 5 then
+        if not Player:IsMoving() and GlacialSpike:IsKnownAndUsable() and GlacialSpike:IsInRange(Target) then
             if GlacialSpike:Cast(Target) then return end
         end
     end
 
     -- [优先级2] 碎裂(Flurry) - 有急冻大脑时消耗
     -- 碎裂是最高伤害来源(40%)，急冻大脑BUFF必须尽快消耗
-    -- 碎裂后目标会有凛冬之寒DEBUFF，后续冰枪术会暴击
+    -- (注意：在当前版本中不再施加深冬之寒，而是叠加冻结层数)
     if HasBrainFreeze() and Flurry:IsKnownAndUsable() then
         if Flurry:IsInRange(Target) then
             if Flurry:Cast(Target) then return end
         end
     end
 
-    -- [优先级3] 冰枪术 - 凛冬之寒窗口期
-    -- 碎裂后目标有凛冬之寒，冰枪术必定暴击，优先消耗
-    if HasWintersChill() then
-        if IceLance:IsKnownAndUsable() and IceLance:IsInRange(Target) then
-            if IceLance:Cast(Target) then return end
-        end
+    -- [优先级3] 冰霜射线 - 卡CD引导
+    -- 法术降生流派的核心输出技能，由于会提供可观的裂片和伤害，优先级极高
+    if not Player:IsMoving() and RayOfFrost:IsKnownAndUsable() and RayOfFrost:IsInRange(Target) then
+        if RayOfFrost:Cast(Target) then return end
     end
 
-    -- [优先级4] 冰枪术 - 消耗冰手指触发
-    -- 冰手指让冰枪术视为目标被冻结，必定暴击
-    if GetFingersOfFrostStacks() > 0 then
+    -- [优先级4] 冰枪术 - 核心输出条件
+    -- 触发条件: 玩家有冰手指 / 目标有5层及以上冻结(1221389)
+    if GetFingersOfFrostStacks() > 0 or GetFreezingStacks() >= 5 then
         if IceLance:IsKnownAndUsable() and IceLance:IsInRange(Target) then
             if IceLance:Cast(Target) then return end
         end
@@ -393,15 +386,7 @@ M:Sync(function()
         if CometStorm:Cast(Target) then return end
     end
 
-    -- [优先级7] 冰霜射线 - CD好了引导
-    -- 冰霜射线是持续引导法术，伤害很高
-    if not Player:IsMoving() and RayOfFrost:IsKnown() then
-        if RayOfFrost:IsKnownAndUsable() and RayOfFrost:IsInRange(Target) then
-            if RayOfFrost:Cast(Target) then return end
-        end
-    end
-
-    -- [优先级8] 变换之力 - 用于减少技能CD
+    -- [优先级7] 变换之力 - 用于减少技能CD
     if not Player:IsMoving() and ShiftingPower:IsKnown() then
         if ShiftingPower:IsKnownAndUsable() then
             -- 仅在主要CD都在冷却中时使用
@@ -431,6 +416,11 @@ M:Sync(function()
         if ConeOfCold:IsKnownAndUsable() and Player:InMelee(Target) then
             if ConeOfCold:Cast(Target) then return end
         end
+
+        -- 超级新星 (AOE/打断补足)
+        if M:GetSetting("useSupernova") and Supernova:IsKnownAndUsable() and Supernova:IsInRange(Target) then
+            if Supernova:Cast(Target) then return end
+        end
     end
 
     -- ==================================================================
@@ -455,12 +445,9 @@ M:Sync(function()
     end
 
     -- ==================================================================
-    -- 寒冰箭填充 (Filler)
-    -- ==================================================================
-
-    -- 寒冰箭是基础填充法术，没有其他更高优先级操作时使用
-    if not Player:IsMoving() and Frostbolt:IsKnownAndUsable() then
-        if Frostbolt:IsInRange(Target) then
+    -- 基础填充法术，没有其他更高优先级操作时使用
+    if not Player:IsMoving() then
+        if Frostbolt:IsKnownAndUsable() and Frostbolt:IsInRange(Target) then
             if Frostbolt:Cast(Target) then return end
         end
     end
