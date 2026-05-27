@@ -37,6 +37,7 @@ GuardianModule:DefineSettings({
     { type = "header", label = "Interrupt Settings", labelZh = "打断设置" },
     { key = "auto_interrupt", type = "toggle", label = "Auto Interrupt", labelZh = "自动打断", default = true },
     { key = "auto_mass_interrupt", type = "toggle", label = "Auto Mass Interrupt (Roar)", labelZh = "自动群体打断(和谐咆哮)", default = true },
+    { key = "auto_taunt", type = "toggle", label = "Auto Growl (Taunt on Lost Aggro)", labelZh = "自动嘲讽丢仇恨目标(低吼)", default = true },
 })
 
 ----------------------------------------------------------------------
@@ -62,9 +63,10 @@ local Barkskin              = SpellBook:GetSpell(22812)
 local FrenziedRegeneration  = SpellBook:GetSpell(22842)
 local SurvivalInstincts     = SpellBook:GetSpell(61336)
 
--- 打断 / 控制
+-- 打断 / 控制 / 嘲讽
 local SkullBash         = SpellBook:GetSpell(106839)
 local IncapacitatingRoar = SpellBook:GetSpell(99)
+local Growl              = SpellBook:GetSpell(6795) -- 低吼 (嘲讽)
 
 -- 形态
 local BearForm   = SpellBook:GetSpell(5487)
@@ -133,7 +135,7 @@ GuardianModule:Sync(function()
 
     -- ==================== 打断 ====================
     if GuardianModule:GetSetting("auto_interrupt") then
-        if Target:IsInterruptible() and Target:GetDistance(Player) <= 13 then
+        if Target:IsInterruptible() and Target:GetDistance(Player) <= 13 and Player:IsFacing(Target) then
             if SkullBash:IsKnownAndUsable() then
                 SkullBash:Cast(Target)
                 return
@@ -147,6 +149,17 @@ GuardianModule:Sync(function()
             if IncapacitatingRoar:IsKnownAndUsable() and Target:IsCastingOrChanneling() then
                 IncapacitatingRoar:Cast(Player)
                 return
+            end
+        end
+    end
+
+    -- ==================== 仇恨处理 ====================
+    -- 自动低吼嘲讽丢仇恨的目标 (加入面向判定)
+    if GuardianModule:GetSetting("auto_taunt") and Growl:IsKnownAndUsable() then
+        if Target:IsValid() and Target:IsEnemy() and not Target:IsDead() and Player:IsAffectingCombat() then
+            -- 使用框架自带的 IsTanking 威胁度系统进行高精度仇恨检测，且正对目标时才嘲讽
+            if not Target:IsTanking(Player) and Player:IsFacing(Target) then
+                if Growl:Cast(Target) then return end
             end
         end
     end
@@ -216,53 +229,53 @@ GuardianModule:Sync(function()
         if LunarBeam:Cast(Player) then return end
     end
 
-    -- 2. 高优先级 摧折 (Raze) / 重殴 (Maul) - 防止怒气溢出或消耗高亮免费buff
+    -- 2. 高优先级 摧折 (Raze) / 重殴 (Maul) - 防止怒气溢出或消耗高亮免费buff (加入面向判定)
     local hasTooth = Player:GetAuras():FindMy(ToothAndClawBuff):IsUp()
     if hasTooth or rage >= 80 then
         if Raze:IsKnown() then
-            if Raze:IsKnownAndUsable() and Target:GetDistance(Player) <= 8 then
+            if Raze:IsKnownAndUsable() and Target:GetDistance(Player) <= 8 and Player:IsFacing(Target) then
                 if Raze:Cast(Target) then return end
             end
         else
-            if Maul:IsKnownAndUsable() and Player:InMelee(Target) then
+            if Maul:IsKnownAndUsable() and Player:InMelee(Target) and Player:IsFacing(Target) then
                 if Maul:Cast(Target) then return end
             end
         end
     end
 
-    -- 3. 痛击 (Thrash) - 最高优先级填充，卡CD获取怒气 (16 CPM)
+    -- 3. 痛击 (Thrash) - 最高优先级填充，卡CD获取怒气 (360度周身群拉)
     if Thrash:IsKnownAndUsable() and Target:GetDistance(Player) <= 8 then
         if Thrash:Cast(Player) then return end
     end
 
-    -- 4. 裂伤 (Mangle) - 最高单体填充，卡CD获取怒气 (16 CPM)
-    if Mangle:IsKnownAndUsable() and Player:InMelee(Target) then
-        if Mangle:Cast(Target) then return end
-    end
+    -- -- 4. 裂伤 (Mangle) - 最高单体填充，卡CD获取怒气 (需要面向)
+    -- if Mangle:IsKnownAndUsable() and Player:InMelee(Target) and Player:IsFacing(Target) then
+    --     if Mangle:Cast(Target) then return end
+    -- end
 
-    -- 5. 低优先级 摧折 (Raze) / 重殴 (Maul) - 常规泄怒
+    -- 5. 低优先级 摧折 (Raze) / 重殴 (Maul) - 常规泄怒 (加入面向判定)
     if rage >= 40 and GetIronfurStacks() >= 1 then
         if Raze:IsKnown() then
-            if Raze:IsKnownAndUsable() and Target:GetDistance(Player) <= 8 then
+            if Raze:IsKnownAndUsable() and Target:GetDistance(Player) <= 8 and Player:IsFacing(Target) then
                 if Raze:Cast(Target) then return end
             end
         else
-            if Maul:IsKnownAndUsable() and Player:InMelee(Target) then
+            if Maul:IsKnownAndUsable() and Player:InMelee(Target) and Player:IsFacing(Target) then
                 if Maul:Cast(Target) then return end
             end
         end
     end
 
-    -- 6. 月火术 (Moonfire) - 银河守护者触发 或 DOT 维持
+    -- 6. 月火术 (Moonfire) - 银河守护者触发 或 DOT 维持 (加入面向判定)
     if Player:GetAuras():FindMy(GalacticGuardianBuff):IsUp()
         or not Target:GetAuras():FindMy(MoonfireDot):IsUp()
         or Target:GetAuras():FindMy(MoonfireDot):GetRemainingTime() < 3 then
-        if Moonfire:IsKnownAndUsable() and Target:GetDistance(Player) <= 40 then
+        if Moonfire:IsKnownAndUsable() and Target:GetDistance(Player) <= 40 and Player:IsFacing(Target) then
             if Moonfire:Cast(Target) then return end
         end
     end
 
-    -- 7. 横扫 (Swipe) - 无事可做的底层填充
+    -- 7. 横扫 (Swipe) - 无事可做的底层填充 (360度周身群拉)
     if Swipe:IsKnownAndUsable() and Target:GetDistance(Player) <= 8 then
         if Swipe:Cast(Target) then return end
     end

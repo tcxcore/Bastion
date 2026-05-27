@@ -121,29 +121,29 @@ M:Sync(function()
         -- [优先级 1] 坍缩之星 (消耗 30 灵魂残片)
         -- 核心机制：坍缩之星消耗的是灵魂残片，而不是恶魔之怒。
         -- 只要我们在虚空形态内攒够了 30 片，技能就会亮起，第一时间砸下去！
-        if VoidTransformation:IsKnownAndUsable() then
+        if VoidTransformation:IsKnownAndUsable() and Player:IsFacing(Target) then
             if VoidTransformation:Cast(Target) then return end
         end
 
         -- [优先级 2] 灵魂献祭 (核心产片/Buff技)
         -- 卡CD放，加速获取灵魂残片
-        if SoulSacrifice:IsKnownAndUsable() then
+        if SoulSacrifice:IsKnownAndUsable() and Player:IsFacing(Target) then
             if SoulSacrifice:Cast(Target) then return end
         end
 
         -- [优先级 3] 虚空射线 (减缓怒气流失，延长变身时间)
         -- 卡CD放，尽可能留住恶魔之怒，争取在变身结束前砸出更多的坍缩之星。
-        if VoidRay:IsKnownAndUsable() and VoidRay:IsInRange(Target) then
+        if VoidRay:IsKnownAndUsable() and VoidRay:IsInRange(Target) and Player:IsFacing(Target) then
             if VoidRay:Cast(Target) then return end
         end
 
         -- [优先级 4] 收割 (强化填充)
-        if Reap:IsKnownAndUsable() and Reap:IsInRange(Target) then
+        if Reap:IsKnownAndUsable() and Reap:IsInRange(Target) and Player:IsFacing(Target) then
             if Reap:Cast(Target) then return end
         end
 
         -- [优先级 4] 吞噬 (强化填充)
-        if Devour:IsKnownAndUsable() and Devour:IsInRange(Target) then
+        if Devour:IsKnownAndUsable() and Devour:IsInRange(Target) and Player:IsFacing(Target) then
             if Devour:Cast(Target) then return end
         end
 
@@ -162,29 +162,29 @@ M:Sync(function()
 
         -- [优先级 2] 灵魂献祭 (核心Buff/产片技)
         -- 平稳期卡CD使用，极大加速残片获取。
-        if SoulSacrifice:IsKnownAndUsable() then
+        if SoulSacrifice:IsKnownAndUsable() and Player:IsFacing(Target) then
             if SoulSacrifice:Cast(Target) then return end
         end
 
         -- [优先级 3] 坍缩之星 (防溢出或瞬发)
         -- 平稳期如果有特殊触发机制导致可以打坍缩之星，同样通过变身键砸下
-        if VoidTransformation:IsKnownAndUsable() and VoidTransformation:GetName() == "坍缩之星" then
+        if VoidTransformation:IsKnownAndUsable() and VoidTransformation:GetName() == "坍缩之星" and Player:IsFacing(Target) then
             if VoidTransformation:Cast(Target) then return end
         end
 
         -- [优先级 4] 虚空射线 (防怒气溢出)
         -- 平稳期射线会消耗怒气，仅在怒气即将溢出 (比如 >= 90) 时用来倾泄
-        if fury >= 90 and VoidRay:IsKnownAndUsable() and VoidRay:IsInRange(Target) then
+        if fury >= 90 and VoidRay:IsKnownAndUsable() and VoidRay:IsInRange(Target) and Player:IsFacing(Target) then
             if VoidRay:Cast(Target) then return end
         end
 
         -- [优先级 4] 收割 (核心产片)
-        if Reap:IsKnownAndUsable() and Reap:IsInRange(Target) then
+        if Reap:IsKnownAndUsable() and Reap:IsInRange(Target) and Player:IsFacing(Target) then
             if Reap:Cast(Target) then return end
         end
 
         -- [优先级 5] 吞噬 (核心产片)
-        if Devour:IsKnownAndUsable() and Devour:IsInRange(Target) then
+        if Devour:IsKnownAndUsable() and Devour:IsInRange(Target) and Player:IsFacing(Target) then
             if Devour:Cast(Target) then return end
         end
     end
@@ -194,7 +194,7 @@ M:Sync(function()
     -- ==================================================================
     -- 当离开近战范围时，扔飞镖维持伤害
     if not Player:InMelee(Target) then
-        if ThrowGlaive:IsKnownAndUsable() and ThrowGlaive:IsInRange(Target) then
+        if ThrowGlaive:IsKnownAndUsable() and ThrowGlaive:IsInRange(Target) and Player:IsFacing(Target) then
             if ThrowGlaive:Cast(Target) then return end
         end
     end

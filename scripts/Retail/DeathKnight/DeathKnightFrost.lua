@@ -237,11 +237,12 @@ M:Sync(function()
     end
 
     -- ==================================================================
+    -- ==================================================================
     -- 打断逻辑 (心灵冰冻)
     -- ==================================================================
     if M:GetSetting("useInterrupt") and MindFreeze:IsKnownAndUsable() then
         if Target:IsInterruptibleAt(M:GetSetting("interruptPercent"), false) then
-            if MindFreeze:IsInRange(Target) then
+            if MindFreeze:IsInRange(Target) and Player:IsFacing(Target) then
                 if MindFreeze:Cast(Target) then return end
             end
         end
@@ -279,7 +280,7 @@ M:Sync(function()
         local runicPower = Player:GetPower(6) or 0
         -- 灵界打击消耗45符能。吐息期间如非生命垂危(低于30%血)则避免使用以维持吐息，这里做了兼顾
         if runicPower >= 45 and (not IsBreathing() or currentHP < 30) then
-            if DeathStrike:IsInRange(Target) then
+            if DeathStrike:IsInRange(Target) and Player:IsFacing(Target) then
                 if DeathStrike:Cast(Target) then return end
             end
         end
@@ -316,8 +317,8 @@ M:Sync(function()
         end
 
         -- 死神印记与冰霜之柱爆发逻辑：
-        -- 1. 优先施放死神印记（核心爆发前置技能，消耗1个符文且占GCD）
-        if runes >= 1 and ReapersMark:IsKnownAndUsable() and ReapersMark:IsInRange(Target) then
+        -- 1. 优先施放死神印记（核心爆发前置技能，消耗1个符文且占GCD，需要面向）
+        if runes >= 1 and ReapersMark:IsKnownAndUsable() and ReapersMark:IsInRange(Target) and Player:IsFacing(Target) then
             if ReapersMark:Cast(Target) then return end
         end
 
@@ -351,29 +352,29 @@ M:Sync(function()
         -- 打湮灭/冰霜之镰消耗符文以产出大量符能
         if runes >= 1 and runicPower < 75 then
             if isAOEMode and HasKillingMachine() and Frostscythe:IsKnownAndUsable() then
-                if runes >= 1 and Frostscythe:IsInRange(Target) and Frostscythe:Cast(Target) then return end
+                if runes >= 1 and Frostscythe:IsInRange(Target) and Player:IsFacing(Target) and Frostscythe:Cast(Target) then return end
             end
-            if runes >= 2 and Obliterate:IsInRange(Target) and Obliterate:Cast(Target) then return end
+            if runes >= 2 and Obliterate:IsInRange(Target) and Player:IsFacing(Target) and Obliterate:Cast(Target) then return end
         end
 
         -- [优先级2] 破灭触发：若身上有破灭BUFF（伤害极高且省符文），在不溢出符能的情况下使用湮灭消耗
         if HasExterminate() and runicPower < 85 then
-            if Obliterate:IsInRange(Target) and Obliterate:Cast(Target) then return end
+            if Obliterate:IsInRange(Target) and Player:IsFacing(Target) and Obliterate:Cast(Target) then return end
         end
 
         -- [优先级3] 白霜触发：有白霜BUFF时打免费的凛风冲击
         -- 注意：如果能量极其危险（<35），应该优先打湮灭生能，此时暂不打白霜。
         if HasRime() and runicPower >= 35 and HowlingBlast:IsKnownAndUsable() then
-            if HowlingBlast:IsInRange(Target) and HowlingBlast:Cast(Target) then return end
+            if HowlingBlast:IsInRange(Target) and Player:IsFacing(Target) and HowlingBlast:Cast(Target) then return end
         end
 
         -- [优先级4] 刷新疫病：如果目标身上没有冰霜疫病，在能量安全时用凛风冲击补
         if not HasFrostFever() and runicPower >= 40 and HowlingBlast:IsKnownAndUsable() then
-            if HowlingBlast:IsInRange(Target) and HowlingBlast:Cast(Target) then return end
+            if HowlingBlast:IsInRange(Target) and Player:IsFacing(Target) and HowlingBlast:Cast(Target) then return end
         end
 
         -- [优先级5] 符文富余但溢出防范：如果符能很高且符文全满，即使溢出也打一个湮灭防止符文闲置
-        if runes >= 5 and Obliterate:IsInRange(Target) then
+        if runes >= 5 and Obliterate:IsInRange(Target) and Player:IsFacing(Target) then
             if Obliterate:Cast(Target) then return end
         end
 
@@ -386,27 +387,27 @@ M:Sync(function()
     -- ==================================================================
 
     -- [优先级1] 破灭触发：破灭BUFF可用时打强化湮灭 (破灭不消耗符文，核心伤害)
-    if HasExterminate() and Obliterate:IsInRange(Target) then
+    if HasExterminate() and Obliterate:IsInRange(Target) and Player:IsFacing(Target) then
         if Obliterate:Cast(Target) then return end
     end
 
     -- [优先级2] 保持疫病：若目标没有冰霜疫病，优先打凛风冲击施加
-    if not HasFrostFever() and HowlingBlast:IsKnownAndUsable() and HowlingBlast:IsInRange(Target) then
+    if not HasFrostFever() and HowlingBlast:IsKnownAndUsable() and HowlingBlast:IsInRange(Target) and Player:IsFacing(Target) then
         if HowlingBlast:Cast(Target) then return end
     end
 
     -- [优先级3] 杀戮机器触发：杀戮机器使湮灭必爆
     if HasKillingMachine() then
         -- AOE 模式下，有杀戮机器且点了冰镰，打冰霜之镰 (消耗1个符文)
-        if isAOEMode and runes >= 1 and Frostscythe:IsKnownAndUsable() and Frostscythe:IsInRange(Target) then
+        if isAOEMode and runes >= 1 and Frostscythe:IsKnownAndUsable() and Frostscythe:IsInRange(Target) and Player:IsFacing(Target) then
             if Frostscythe:Cast(Target) then return end
         end
         -- 否则，打湮灭 (常规消耗2个符文)
-        if runes >= 2 and Obliterate:IsInRange(Target) and Obliterate:Cast(Target) then return end
+        if runes >= 2 and Obliterate:IsInRange(Target) and Player:IsFacing(Target) and Obliterate:Cast(Target) then return end
     end
 
     -- [优先级4] 白霜触发：触发白霜BUFF打免费的高伤凛风冲击
-    if HasRime() and HowlingBlast:IsKnownAndUsable() and HowlingBlast:IsInRange(Target) then
+    if HasRime() and HowlingBlast:IsKnownAndUsable() and HowlingBlast:IsInRange(Target) and Player:IsFacing(Target) then
         if HowlingBlast:Cast(Target) then return end
     end
 
@@ -415,17 +416,17 @@ M:Sync(function()
     local isPoolingForBreath = M:GetSetting("useCooldowns") and M:GetSetting("useBreath") and BreathOfSindragosa:IsKnown() and not BreathOfSindragosa:IsOnCooldown() and not IsBreathing()
     if not isPoolingForBreath and (runicPower >= 75 or (runes < 2 and runicPower >= 40)) then
         -- AOE 模式下使用冰川突进 (严格限制：只有目标数量明显较多时才打，防止误判导致单体丢失伤害)
-        if isAOEMode and enemyCount >= 3 and GlacialAdvance:IsKnownAndUsable() and GlacialAdvance:IsInRange(Target) then
+        if isAOEMode and enemyCount >= 3 and GlacialAdvance:IsKnownAndUsable() and GlacialAdvance:IsInRange(Target) and Player:IsFacing(Target) then
             if GlacialAdvance:Cast(Target) then return end
         end
         -- 默认及主目标使用冰霜打击 (严格匹配 WCL 中 12.8 CPM 的高频使用率)
-        if FrostStrike:IsKnownAndUsable() and FrostStrike:IsInRange(Target) then
+        if FrostStrike:IsKnownAndUsable() and FrostStrike:IsInRange(Target) and Player:IsFacing(Target) then
             if FrostStrike:Cast(Target) then return end
         end
     end
 
     -- [优先级6] 符文消耗：当可用符文较多（>= 2）时，使用湮灭攒能并打伤害
-    if runes >= 2 and Obliterate:IsInRange(Target) then
+    if runes >= 2 and Obliterate:IsInRange(Target) and Player:IsFacing(Target) then
         if Obliterate:Cast(Target) then return end
     end
 end)
