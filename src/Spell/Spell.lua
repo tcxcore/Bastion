@@ -327,10 +327,22 @@ end
 -- Check if the spell is currently active (e.g. auto-attack)
 ---@return boolean
 function Spell:IsCurrent()
+    -- 1. 标准当前施法状态检测 (针对近战自动攻击等)
+    local isCurrent = false
     if C_Spell.IsCurrentSpell then
-        return _u(C_Spell.IsCurrentSpell(self:GetID()))
+        isCurrent = _u(C_Spell.IsCurrentSpell(self:GetID()))
     end
-    return false
+    if isCurrent then return true end
+
+    -- 2. 针对远程开关型自动循环物理法术 (如猎人自动射击 75, 丢魔杖等) 进行智能加固检测
+    local isAutoRepeat = false
+    if C_Spell.IsAutoRepeatSpell then
+        isAutoRepeat = _u(C_Spell.IsAutoRepeatSpell(self:GetID()))
+    elseif IsAutoRepeatSpell then
+        isAutoRepeat = _u(IsAutoRepeatSpell(self:GetID()))
+    end
+
+    return isAutoRepeat or false
 end
 
 -- Check if the spell is usable

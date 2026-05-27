@@ -41,6 +41,9 @@ M:Sync(function()
 
     if not Target:IsValid() or Target:IsDead() then return end
 
+    -- 敌对指向前置安全墙 (面向与 LoS 视野统一拦截)
+    if not Player:IsFacing(Target) or not Player:CanSee(Target) then return end
+
     if Player:IsMoving() and AzureStrike:IsInRange(Target) then
         if AzureStrike:Cast(Target) then return end
     end

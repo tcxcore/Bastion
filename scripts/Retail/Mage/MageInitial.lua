@@ -28,6 +28,9 @@ M:Sync(function()
     if Player:IsCastingOrChanneling() then return end
     if not Target:IsValid() or Target:IsDead() or not Target:IsEnemy() then return end
 
+    -- 敌对指向前置安全墙 (面向与 LoS 视野统一拦截)
+    if not Player:IsFacing(Target) or not Player:CanSee(Target) then return end
+
     if Target:IsEnemy() and not AutoAttack:IsCurrent() and AutoAttack:IsInRange(Target) then
         AutoAttack:Cast(Target)
     end

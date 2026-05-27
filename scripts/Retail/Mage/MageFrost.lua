@@ -257,46 +257,18 @@ end
 -- 战斗循环主体
 -- ======================================================================
 
-M:Sync(function()
-    -- 正在施法中跳过 (等待当前施法完成)
-    if Player:IsCasting() then return end
-    -- 正在引导中跳过 (绝对不能打断冰霜射线的引导)
-    if Player:IsChanneling() then return end
-
-    -- 目标验证
-    if not Target:IsValid() or Target:IsDead() or not Target:IsEnemy() then return end
-
-    -- 自动攻击
-    if not AutoAttack:IsCurrent() and AutoAttack:IsInRange(Target) then
-        AutoAttack:Cast(Target)
-    end
-
     -- ==================================================================
-    -- 打断逻辑 (法术反制 - 施法CSV中使用3次)
-    -- ==================================================================
-    if M:GetSetting("useInterrupt") and Counterspell:IsKnownAndUsable() then
-        if Target:IsInterruptibleAt(M:GetSetting("interruptPercent"), false) then
-            if Counterspell:IsInRange(Target) and Player:IsFacing(Target) then
-                if Counterspell:Cast(Target) then return end
-            end
-        end
-    end
-
-    -- ==================================================================
-    -- 防御/自保逻辑
+    -- 1. 自身防御与自保逻辑 (无需任何目标，最高优先级自救)
     -- ==================================================================
 
     -- 寒冰屏障 / 深寒凝冰 (紧急保命)
-    -- 注意: 深寒凝冰是被动天赋，实际施放的技能仍然是寒冰屏障(45438)
     if M:GetSetting("useIceBlock") and Player:GetHP() <= M:GetSetting("iceBlockHP") then
         if IceBlock:IsKnownAndUsable() then
             if IceBlock:Cast(Player) then return end
         end
     end
 
-    -- 操控时间 (血量低于阈值时自动回溯, 施法CSV中使用3次)
-    -- 注意: 操控时间第一次使用为"激活"记录状态, 第二次使用为"回溯"恢复
-    -- 此处仅处理回溯逻辑: 当操控时间已激活且血量过低时自动触发回溯
+    -- 操控时间 (血量低于阈值时自动回溯)
     if M:GetSetting("useAlterTime") then
         local alterTimeAura = Player:GetAuras():FindMy(AlterTimeBuff)
         if alterTimeAura:IsUp() and Player:GetHP() <= M:GetSetting("alterTimeHP") then
@@ -311,6 +283,31 @@ M:Sync(function()
         local iceBarrierAura = Player:GetAuras():FindMy(IceBarrier)
         if not iceBarrierAura:IsUp() and IceBarrier:IsKnownAndUsable() then
             if IceBarrier:Cast(Player) then return end
+        end
+    end
+
+    -- 目标验证
+    if not Target:IsValid() or Target:IsDead() or not Target:IsEnemy() then return end
+
+    -- ==================================================================
+    -- 敌对指向前置安全墙 (面向与 LoS 视野统一拦截)
+    -- 目标无效、不在视野或背对目标时直接返回，节省后续所有 CPU 射线开销
+    -- ==================================================================
+    if not Player:IsFacing(Target) or not Player:CanSee(Target) then return end
+
+    -- 自动攻击
+    if not AutoAttack:IsCurrent() and AutoAttack:IsInRange(Target) then
+        AutoAttack:Cast(Target)
+    end
+
+    -- ==================================================================
+    -- 打断逻辑 (法术反制)
+    -- ==================================================================
+    if M:GetSetting("useInterrupt") and Counterspell:IsKnownAndUsable() then
+        if Target:IsInterruptibleAt(M:GetSetting("interruptPercent"), false) then
+            if Counterspell:IsInRange(Target) then
+                if Counterspell:Cast(Target) then return end
+            end
         end
     end
 
@@ -346,7 +343,7 @@ M:Sync(function()
 
     -- [优先级1] 冰川尖刺 - 必须拥有大冰刺高亮Buff(5层冰锥)时才释放
     if GetIciclesCount() >= 5 then
-        if not Player:IsMoving() and GlacialSpike:IsKnownAndUsable() and GlacialSpike:IsInRange(Target) and Player:IsFacing(Target) then
+        if not Player:IsMoving() and GlacialSpike:IsKnownAndUsable() and GlacialSpike:IsInRange(Target) then
             if GlacialSpike:Cast(Target) then return end
         end
     end
@@ -355,34 +352,34 @@ M:Sync(function()
     -- 碎裂是最高伤害来源(40%)，急冻大脑BUFF必须尽快消耗
     -- (注意：在当前版本中不再施加深冬之寒，而是叠加冻结层数)
     if HasBrainFreeze() and Flurry:IsKnownAndUsable() then
-        if Flurry:IsInRange(Target) and Player:IsFacing(Target) then
+        if Flurry:IsInRange(Target) then
             if Flurry:Cast(Target) then return end
         end
     end
 
     -- [优先级3] 冰霜射线 - 卡CD引导
     -- 法术降生流派的核心输出技能，由于会提供可观的裂片和伤害，优先级极高
-    if not Player:IsMoving() and RayOfFrost:IsKnownAndUsable() and RayOfFrost:IsInRange(Target) and Player:IsFacing(Target) then
+    if not Player:IsMoving() and RayOfFrost:IsKnownAndUsable() and RayOfFrost:IsInRange(Target) then
         if RayOfFrost:Cast(Target) then return end
     end
 
     -- [优先级4] 冰枪术 - 核心输出条件
     -- 触发条件: 玩家有冰手指 / 目标有5层及以上冻结(1221389)
     if GetFingersOfFrostStacks() > 0 or GetFreezingStacks() >= 5 then
-        if IceLance:IsKnownAndUsable() and IceLance:IsInRange(Target) and Player:IsFacing(Target) then
+        if IceLance:IsKnownAndUsable() and IceLance:IsInRange(Target) then
             if IceLance:Cast(Target) then return end
         end
     end
 
     -- [优先级5] 寒冰宝珠 - CD好了就放
     -- 寒冰宝珠滚过去会持续触发冰手指和碎裂
-    if FrozenOrb:IsKnownAndUsable() and FrozenOrb:IsInRange(Target) and Player:IsFacing(Target) then
+    if FrozenOrb:IsKnownAndUsable() and FrozenOrb:IsInRange(Target) then
         if FrozenOrb:Cast(Target) then return end
     end
 
     -- [优先级6] 冰风暴 - CD好了就放 (单体和AOE都用)
     -- 冰风暴是高伤害天赋技能，单体也有不错收益
-    if CometStorm:IsKnownAndUsable() and CometStorm:IsInRange(Target) and Player:IsFacing(Target) then
+    if CometStorm:IsKnownAndUsable() and CometStorm:IsInRange(Target) then
         if CometStorm:Cast(Target) then return end
     end
 
@@ -404,7 +401,7 @@ M:Sync(function()
     -- ==================================================================
     if useAOE and enemyCount >= M:GetSetting("aoeTargets") then
         -- 暴风雪 (大面积AOE, 多目标时优先级最高)
-        if not Player:IsMoving() and Blizzard:IsKnownAndUsable() and Player:IsFacing(Target) then
+        if not Player:IsMoving() and Blizzard:IsKnownAndUsable() then
             if Blizzard:Cast(Target) then
                 -- 暴风雪是AOE落点技能，需要点击地面
                 Blizzard:Click(Target:GetPosition())
@@ -413,12 +410,12 @@ M:Sync(function()
         end
 
         -- 冰锥术 (近战范围AOE)
-        if ConeOfCold:IsKnownAndUsable() and Player:InMelee(Target) and Player:IsFacing(Target) then
+        if ConeOfCold:IsKnownAndUsable() and Player:InMelee(Target) then
             if ConeOfCold:Cast(Target) then return end
         end
 
         -- 超级新星 (AOE/打断补足)
-        if M:GetSetting("useSupernova") and Supernova:IsKnownAndUsable() and Supernova:IsInRange(Target) and Player:IsFacing(Target) then
+        if M:GetSetting("useSupernova") and Supernova:IsKnownAndUsable() and Supernova:IsInRange(Target) then
             if Supernova:Cast(Target) then return end
         end
     end
@@ -438,7 +435,7 @@ M:Sync(function()
         end
 
         -- 移动时使用冰枪术填充 (即使没有BUFF)
-        if IceLance:IsKnownAndUsable() and IceLance:IsInRange(Target) and Player:IsFacing(Target) then
+        if IceLance:IsKnownAndUsable() and IceLance:IsInRange(Target) then
             if IceLance:Cast(Target) then return end
         end
         return
@@ -447,7 +444,7 @@ M:Sync(function()
     -- ==================================================================
     -- 基础填充法术，没有其他更高优先级操作时使用
     if not Player:IsMoving() then
-        if Frostbolt:IsKnownAndUsable() and Frostbolt:IsInRange(Target) and Player:IsFacing(Target) then
+        if Frostbolt:IsKnownAndUsable() and Frostbolt:IsInRange(Target) then
             if Frostbolt:Cast(Target) then return end
         end
     end

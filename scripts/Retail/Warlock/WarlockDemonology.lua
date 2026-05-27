@@ -156,17 +156,24 @@ M:Sync(function()
     end
 
     -- ==================================================================
+    -- 敌对指向前置安全墙 (面向与 LoS 视野统一拦截)
+    -- 所有剩余技能（除防守外）均为对 Target 施放的远程动作，
+    -- 若背对目标或卡视野，则直接拦截本次 Ticker，极大节省 CPU 射线开销
+    -- ==================================================================
+    if not Player:IsFacing(Target) or not Player:CanSee(Target) then return end
+
+    -- ==================================================================
     -- 爆发与大招 (Cooldowns)
     -- ==================================================================
     if M:GetSetting("useCooldowns") then
         -- 魔典：小鬼领主 (长CD爆发，优先于暴君放出以便被暴君延长)
-        if GrimoireFelguard:IsKnownAndUsable() and GrimoireFelguard:IsInRange(Target) and Player:IsFacing(Target) then
+        if GrimoireFelguard:IsKnownAndUsable() and GrimoireFelguard:IsInRange(Target) then
             if GrimoireFelguard:Cast(Target) then return end
         end
 
         -- 召唤恶魔暴君 (核心爆发)
         -- 通常在场上有足够多的野生小鬼和恐惧猎犬时使用
-        if SummonDemonicTyrant:IsKnownAndUsable() and Player:IsFacing(Target) then
+        if SummonDemonicTyrant:IsKnownAndUsable() then
             if SummonDemonicTyrant:Cast(Target) then return end
         end
     end
@@ -177,13 +184,13 @@ M:Sync(function()
 
     -- [优先级1] 陨灭 (Ruin) - 恶魔使徒英雄天赋高亮瞬发
     -- 只要可用且在范围内，立刻打出，不占用碎片且伤害极高
-    if Ruin:IsKnownAndUsable() and Ruin:IsInRange(Target) and Player:IsFacing(Target) then
+    if Ruin:IsKnownAndUsable() and Ruin:IsInRange(Target) then
         if Ruin:Cast(Target) then return end
     end
 
     -- [优先级2] 召唤恐惧猎犬 (核心CD)
     -- 卡CD使用，保持场上恶魔数量，并为恶魔之核提供来源
-    if CallDreadstalkers:IsKnownAndUsable() and CallDreadstalkers:IsInRange(Target) and Player:IsFacing(Target) then
+    if CallDreadstalkers:IsKnownAndUsable() and CallDreadstalkers:IsInRange(Target) then
         if shards >= 2 then
             if CallDreadstalkers:Cast(Target) then return end
         end
@@ -192,7 +199,7 @@ M:Sync(function()
     -- [优先级3] AOE循环: 内爆 (Implosion)
     -- 当周围敌人数量达到阈值时使用内爆消耗野生小鬼
     if M:GetSetting("useAOE") and GetEnemyCount(10) >= M:GetSetting("aoeTargets") then
-        if Implosion:IsKnownAndUsable() and Implosion:IsInRange(Target) and Player:IsFacing(Target) then
+        if Implosion:IsKnownAndUsable() and Implosion:IsInRange(Target) then
             -- 简单逻辑：多目标时卡CD或按节奏内爆
             if Implosion:Cast(Target) then return end
         end
@@ -201,7 +208,7 @@ M:Sync(function()
     -- [优先级4] 恶魔之箭 (Demonbolt) - 拥有恶魔之核时瞬发
     -- 防止碎片溢出，当碎片 <= 3 且有恶魔之核时打出，瞬间回复2块碎片
     if GetDemonicCoreStacks() > 0 then
-        if shards <= 3 and Demonbolt:IsKnownAndUsable() and Demonbolt:IsInRange(Target) and Player:IsFacing(Target) then
+        if shards <= 3 and Demonbolt:IsKnownAndUsable() and Demonbolt:IsInRange(Target) then
             if Demonbolt:Cast(Target) then return end
         end
     end
@@ -210,7 +217,7 @@ M:Sync(function()
     -- 当碎片达到或超过3块时，打出满星古尔丹之手召唤最多的小鬼
     -- 如果碎片即将溢出(5片)且恶魔之核可用，也优先打出古尔丹之手
     if shards >= 3 then
-        if HandOfGuldan:IsKnownAndUsable() and HandOfGuldan:IsInRange(Target) and Player:IsFacing(Target) then
+        if HandOfGuldan:IsKnownAndUsable() and HandOfGuldan:IsInRange(Target) then
             if HandOfGuldan:Cast(Target) then return end
         end
     end
@@ -220,7 +227,7 @@ M:Sync(function()
     -- ==================================================================
     if Player:IsMoving() then
         -- 移动中如果有恶魔之核，可以使用瞬发恶魔之箭
-        if GetDemonicCoreStacks() > 0 and Demonbolt:IsKnownAndUsable() and Demonbolt:IsInRange(Target) and Player:IsFacing(Target) then
+        if GetDemonicCoreStacks() > 0 and Demonbolt:IsKnownAndUsable() and Demonbolt:IsInRange(Target) then
             if Demonbolt:Cast(Target) then return end
         end
         return
@@ -231,7 +238,7 @@ M:Sync(function()
     -- ==================================================================
     
     -- 暗影箭 (Shadow Bolt) - 在没有其他高优先级技能，且需要产生碎片时搓
-    if ShadowBolt:IsKnownAndUsable() and ShadowBolt:IsInRange(Target) and Player:IsFacing(Target) then
+    if ShadowBolt:IsKnownAndUsable() and ShadowBolt:IsInRange(Target) then
         if ShadowBolt:Cast(Target) then return end
     end
 

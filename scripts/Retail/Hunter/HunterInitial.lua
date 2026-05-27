@@ -5,7 +5,7 @@ local Player = Bastion.UnitManager:Get('player')
 local Target = Bastion.UnitManager:Get('target')
 local SpellBook = Bastion.SpellBook:New()
 
-local AutoAttack = SpellBook:GetSpell(6603)
+local AutoShot = SpellBook:GetSpell(75)
 local KillCommand = SpellBook:GetSpell(34026)
 local MendPet = SpellBook:GetSpell(136)
 local ArcaneShot = SpellBook:GetSpell(185358)
@@ -31,22 +31,27 @@ M:Sync(function()
     if Player:IsCastingOrChanneling() then return end
     if not Target:IsValid() or Target:IsDead() or not Target:IsEnemy() then return end
 
-    if Target:IsEnemy() and not AutoAttack:IsCurrent() and AutoAttack:IsInRange(Target) then
-        AutoAttack:Cast(Target)
+    if not AutoShot:IsCurrent() then
+        AutoShot:Cast(Target)
     end
 
     local Pet = Bastion.UnitManager:Get('pet')
     if Pet and Pet:IsValid() and not Pet:IsDead() then
         if Pet:GetHP() < M:GetSetting("healThreshold") then
             if not Pet:GetAuras():FindMy(MendPet):IsUp() then
-                if MendPet:Cast(Pet) then return end
+                if MendPet:Cast(Player) then return end
             end
         end
     end
 
     if not Target:IsValid() or Target:IsDead() then return end
 
-    if KillCommand:IsInRange(Target) and KillCommand:Cast(Target) then return end
+    -- 敌对指向前置安全墙 (面向与 LoS 视野统一拦截)
+    if not Player:IsFacing(Target) or not Player:CanSee(Target) then return end
+
+    if KillCommand:IsInRange(Target) then
+        if KillCommand:Cast(Target) then return end
+    end
     
     local power = Player:GetPower(2) or 0
     if power > 40 and ArcaneShot:IsInRange(Target) then

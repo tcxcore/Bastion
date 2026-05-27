@@ -116,6 +116,13 @@ M:Sync(function()
     -- 检查是否可以进行攻击
     if not Target:IsEnemy() or not Target:IsAlive() then return end
 
+    -- ==================================================================
+    -- 敌对指向前置安全墙 (面向与 LoS 视野统一拦截)
+    -- 所有后续技能均为对 Target 施放的远程动作，
+    -- 若背对目标或卡视野，则直接拦截本次 Ticker，极大节省 CPU 射线开销
+    -- ==================================================================
+    if not Player:IsFacing(Target) or not Player:CanSee(Target) then return end
+
     -- 自动攻击
     if AutoAttack:IsKnownAndUsable() and not Player:IsAttacking() then
         AutoAttack:Cast(Target)
@@ -130,41 +137,41 @@ M:Sync(function()
     local useCDs = M:GetSetting("useCooldowns")
 
     -- [优先级0] 召唤地狱火 (长CD爆发)
-    if SummonInfernal:IsKnownAndUsable() and SummonInfernal:IsInRange(Target) and Player:IsFacing(Target) then
+    if SummonInfernal:IsKnownAndUsable() and SummonInfernal:IsInRange(Target) then
         if useCDs then
             if SummonInfernal:Cast(Target) then return end
         end
     end
 
     -- [优先级1] 大灾变 (AOE并铺设献祭)
-    if Cataclysm:IsKnownAndUsable() and Cataclysm:IsInRange(Target) and Player:IsFacing(Target) then
+    if Cataclysm:IsKnownAndUsable() and Cataclysm:IsInRange(Target) then
         if not isMoving then
             if Cataclysm:Cast(Target) then return end
         end
     end
 
     -- [优先级2] 引导恶魔之火 (前提：目标有献祭)
-    if immolateUp and ChannelDemonfire:IsKnownAndUsable() and ChannelDemonfire:IsInRange(Target) and Player:IsFacing(Target) then
+    if immolateUp and ChannelDemonfire:IsKnownAndUsable() and ChannelDemonfire:IsInRange(Target) then
         if not isMoving then
             if ChannelDemonfire:Cast(Target) then return end
         end
     end
 
-    -- [优先级3] 陨灭 (Ruin) - 恶魔使徒触发的瞬发核弹
-    if Ruin:IsKnownAndUsable() and Ruin:IsInRange(Target) and Player:IsFacing(Target) then
+    -- [优先级3] 陨灭 (Ruin) - 恶魔使触发的瞬发核弹
+    if Ruin:IsKnownAndUsable() and Ruin:IsInRange(Target) then
         if Ruin:Cast(Target) then return end
     end
 
     -- [优先级4] 保持献祭 (Immolate)
     -- 如果没有大灾变，且献祭快断了 (< 5.4秒)
-    if Immolate:IsKnownAndUsable() and Immolate:IsInRange(Target) and Player:IsFacing(Target) then
+    if Immolate:IsKnownAndUsable() and Immolate:IsInRange(Target) then
         if not isMoving and immolateRemain < 5.4 then
             if Immolate:Cast(Target) then return end
         end
     end
 
     -- [优先级5] 灵魂之火 (卡CD用)
-    if SoulFire:IsKnownAndUsable() and SoulFire:IsInRange(Target) and Player:IsFacing(Target) then
+    if SoulFire:IsKnownAndUsable() and SoulFire:IsInRange(Target) then
         if not isMoving then
             if SoulFire:Cast(Target) then return end
         end
@@ -172,7 +179,7 @@ M:Sync(function()
 
     -- [优先级6] 燃烧 (控制层数，打出爆燃)
     -- 如果有2层，或者碎片较少，优先打燃烧
-    if Conflagrate:IsKnownAndUsable() and Conflagrate:IsInRange(Target) and Player:IsFacing(Target) then
+    if Conflagrate:IsKnownAndUsable() and Conflagrate:IsInRange(Target) then
         local charges = Conflagrate:GetCharges()
         if charges == 2 or shards < 2 or not HasBackdraft() then
             if Conflagrate:Cast(Target) then return end
@@ -181,7 +188,7 @@ M:Sync(function()
 
     -- [优先级7] 斩杀或移动战：暗影灼烧
     -- 严格控制在目标血量<20% 或 玩家正在移动时使用
-    if Shadowburn:IsKnownAndUsable() and Shadowburn:IsInRange(Target) and Player:IsFacing(Target) then
+    if Shadowburn:IsKnownAndUsable() and Shadowburn:IsInRange(Target) then
         if targetHp < 20 or isMoving then
             if Shadowburn:Cast(Target) then return end
         end
@@ -191,22 +198,24 @@ M:Sync(function()
     if shards >= 2 then
         if isAoe then
             -- AOE 优先级：火焰之雨 (3个碎片)
-            if shards >= 3 and RainOfFire:IsKnownAndUsable() and RainOfFire:IsInRange(Target) and Player:IsFacing(Target) then
+            if shards >= 3 and RainOfFire:IsKnownAndUsable() and RainOfFire:IsInRange(Target) then
                 if RainOfFire:Cast(Target) then return end
             end
-        else
-            -- 单体 优先级：混乱之箭
-            -- 当碎片溢出(>=4) 或者 有爆燃Buff时打混乱之箭
-            if ChaosBolt:IsKnownAndUsable() and ChaosBolt:IsInRange(Target) and Player:IsFacing(Target) then
-                if not isMoving and (shards >= 4 or HasBackdraft()) then
-                    if ChaosBolt:Cast(Target) then return end
-                end
+        end
+    end
+
+    if not isAoe and shards >= 2 then
+        -- 单体 优先级：混乱之箭
+        -- 当碎片溢出(>=4) 或者 有爆燃Buff时打混乱之箭
+        if ChaosBolt:IsKnownAndUsable() and ChaosBolt:IsInRange(Target) then
+            if not isMoving and (shards >= 4 or HasBackdraft()) then
+                if ChaosBolt:Cast(Target) then return end
             end
         end
     end
 
     -- [优先级9] 填充：烧尽
-    if Incinerate:IsKnownAndUsable() and Incinerate:IsInRange(Target) and Player:IsFacing(Target) then
+    if Incinerate:IsKnownAndUsable() and Incinerate:IsInRange(Target) then
         if not isMoving then
             if Incinerate:Cast(Target) then return end
         end
