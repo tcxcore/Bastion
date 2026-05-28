@@ -117,7 +117,7 @@ local AvengingWrath     = SpellBook:GetSpell(31884)  -- 复仇之怒
 local ExecutionSentence = SpellBook:GetSpell(343527) -- 处决宣判
 local WakeOfAshes       = SpellBook:GetSpell(255937) -- 灰烬觉醒 (产3)
 local HammerOfLight     = SpellBook:GetSpell(427453) -- 圣光之锤 (圣殿骑士大招，耗5)
-local DivineToll        = SpellBook:GetSpell(304971) -- 圣洁鸣钟 (大量产豆)
+local DivineToll        = SpellBook:GetSpell(375576) -- 圣洁鸣钟 (大量产豆)
 
 -- 防御与打断
 local Rebuke            = SpellBook:GetSpell(96231)  -- 责难
