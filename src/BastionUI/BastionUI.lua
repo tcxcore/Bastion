@@ -447,6 +447,22 @@ function BastionUI:BuildModuleSettings(module)
             yOffset = yOffset + 50
             lastWidget = dd
             table.insert(self.settingsWidgets, dd)
+
+        elseif def.type == "button" then
+            local btn = AF.CreateButton(content, GetSettingLabel(def), "accent", def.width or 280, def.height or 22)
+            if lastWidget then
+                AF.SetPoint(btn, "TOPLEFT", lastWidget, "BOTTOMLEFT", 0, -10)
+            else
+                AF.SetPoint(btn, "TOPLEFT", 10, -(yOffset + 5))
+            end
+            btn:SetOnClick(function()
+                if def.onClick then
+                    def.onClick()
+                end
+            end)
+            yOffset = yOffset + 25
+            lastWidget = btn
+            table.insert(self.settingsWidgets, btn)
         end
     end
 

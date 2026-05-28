@@ -16,11 +16,78 @@ local SpellBook = Bastion.SpellBook:New()
 -- UI 设置定义
 ----------------------------------------------------------------------
 M:DefineSettings({
-    { type = "header", label = "== Core Talent Requirements ==", labelZh = "== 核心必要天赋需求 ==" },
-    { type = "header", label = "Hero Spec: Master of Harmony (12.0.5)", labelZh = "※ 英雄天赋: 祥和宗师 (12.0.5)" },
-    { type = "header", label = "Key Hero Talents: Harmonic Surge, Unified Path, Harmonic Avatar", labelZh = "★ 核心英雄被动: 和谐涌动、大道同归、和谐化身" },
-    { type = "header", label = "Key Spec Passive: Empty Keg, Spirited Kick, Special Delivery", labelZh = "★ 核心被动联动: 空酒桶、烈酒连踢、特别快递" },
-    { type = "header", label = "Active Talents: Keg Smash, Breath of Fire, Celestial Infusion", labelZh = "★ 核心主动技能: 醉酿投、火焰之息、幻灭踢、天神灌注(专精必点)、双酒自控" },
+    {
+        type = "button",
+        key = "exportTalents",
+        label = "Copy Recommend Talents",
+        labelZh = "复制推荐配置天赋导出",
+        width = 280,
+        onClick = function()
+            local talentStr = "CwQAAAAAAAAAAAAAAAAAAAAAAAAAAgZbzYGGzyMzGzMjBAAAAAAYZBzEzMwMM2AmZmZY2sNzYsMss9AbbzGmFAAYZWmWmtZWGAAAADbgZGw0YADAYA"
+            if C_Keybindings and C_Keybindings.CopyToClipboard then
+                if C_Keybindings.CopyToClipboard(talentStr) then
+                    Bastion:Print("|cFF00FF00[推荐天赋]|r 天赋导出字符串已成功复制到系统剪贴板！可以直接在游戏内导入。")
+                    return
+                end
+            end
+            StaticPopupDialogs["BASTION_COPY_TALENTS"] = {
+                text = "请按 Ctrl+C 复制推荐天赋配置：",
+                button1 = "关闭",
+                hasEditBox = true,
+                OnShow = function(self)
+                    self.EditBox:Hide()
+                    C_Timer.After(0.05, function()
+                        if self:IsShown() then
+                            self:SetWidth(420)
+                            self:SetHeight(180)
+                            self.EditBox:SetWidth(380)
+                            self.EditBox:SetHeight(90)
+                            if not self.CustomEditBox then
+                                local bg = CreateFrame("Frame", nil, self, "BackdropTemplate")
+                                bg:SetBackdrop({
+                                    bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+                                    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+                                    tile = true, tileSize = 16, edgeSize = 12,
+                                    insets = { left = 3, right = 3, top = 3, bottom = 3 }
+                                })
+                                bg:SetBackdropColor(0, 0, 0, 0.8)
+                                bg:SetBackdropBorderColor(0.5, 0.5, 0.5, 0.8)
+                                local edit = CreateFrame("EditBox", nil, bg)
+                                edit:SetMultiLine(true)
+                                edit:SetFontObject("ChatFontNormal")
+                                edit:SetSize(370, 80)
+                                edit:SetPoint("CENTER", bg, "CENTER", 0, 0)
+                                edit:SetScript("OnEscapePressed", function() self:Hide() end)
+                                self.CustomEditBox, self.CustomEditBG = edit, bg
+                            end
+                            self.CustomEditBG:SetAllPoints(self.EditBox)
+                            self.CustomEditBG:Show()
+                            self.CustomEditBox:Show()
+                            self.CustomEditBox:SetText(talentStr)
+                            self.CustomEditBox:HighlightText()
+                            self.CustomEditBox:SetFocus()
+                        end
+                    end)
+                end,
+                OnHide = function(self)
+                    self:SetWidth(320)
+                    self:SetHeight(130)
+                    self.EditBox:SetWidth(290)
+                    self.EditBox:SetHeight(20)
+                    self.EditBox:Show()
+                    if self.CustomEditBox then
+                        self.CustomEditBox:Hide()
+                        self.CustomEditBG:Hide()
+                    end
+                end,
+                timeout = 0,
+                whileDead = true,
+                hideOnEscape = true,
+            }
+            StaticPopup_Show("BASTION_COPY_TALENTS")
+            Bastion:Print("|cFFFFCC00[推荐天赋]|r 已拉起复制框，请按 Ctrl+C 复制天赋导入字符串。")
+        end
+    },
     
     -- 防御阈值设置
     { type = "header", label = "Defensive Settings", labelZh = "== 防御自救设置 ==" },

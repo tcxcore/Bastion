@@ -14,6 +14,79 @@ local SpellBook = Bastion.SpellBook:New()
 ----------------------------------------------------------------------
 FeralModule:SetDisplayName("Feral Druid", "野性德鲁伊")
 FeralModule:DefineSettings({
+    {
+        type = "button",
+        key = "exportTalents",
+        label = "Copy Recommend Talents",
+        labelZh = "复制推荐配置天赋导出",
+        width = 280,
+        onClick = function()
+            local talentStr = ""
+            if C_Keybindings and C_Keybindings.CopyToClipboard then
+                if C_Keybindings.CopyToClipboard(talentStr) then
+                    Bastion:Print("|cFF00FF00[推荐天赋]|r 天赋导出字符串已成功复制到系统剪贴板！可以直接在游戏内导入。")
+                    return
+                end
+            end
+            StaticPopupDialogs["BASTION_COPY_TALENTS"] = {
+                text = "请按 Ctrl+C 复制推荐天赋配置：",
+                button1 = "关闭",
+                hasEditBox = true,
+                OnShow = function(self)
+                    self.EditBox:Hide()
+                    C_Timer.After(0.05, function()
+                        if self:IsShown() then
+                            self:SetWidth(420)
+                            self:SetHeight(180)
+                            self.EditBox:SetWidth(380)
+                            self.EditBox:SetHeight(90)
+                            if not self.CustomEditBox then
+                                local bg = CreateFrame("Frame", nil, self, "BackdropTemplate")
+                                bg:SetBackdrop({
+                                    bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+                                    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+                                    tile = true, tileSize = 16, edgeSize = 12,
+                                    insets = { left = 3, right = 3, top = 3, bottom = 3 }
+                                })
+                                bg:SetBackdropColor(0, 0, 0, 0.8)
+                                bg:SetBackdropBorderColor(0.5, 0.5, 0.5, 0.8)
+                                local edit = CreateFrame("EditBox", nil, bg)
+                                edit:SetMultiLine(true)
+                                edit:SetFontObject("ChatFontNormal")
+                                edit:SetSize(370, 80)
+                                edit:SetPoint("CENTER", bg, "CENTER", 0, 0)
+                                edit:SetScript("OnEscapePressed", function() self:Hide() end)
+                                self.CustomEditBox, self.CustomEditBG = edit, bg
+                            end
+                            self.CustomEditBG:SetAllPoints(self.EditBox)
+                            self.CustomEditBG:Show()
+                            self.CustomEditBox:Show()
+                            self.CustomEditBox:SetText(talentStr)
+                            self.CustomEditBox:HighlightText()
+                            self.CustomEditBox:SetFocus()
+                        end
+                    end)
+                end,
+                OnHide = function(self)
+                    self:SetWidth(320)
+                    self:SetHeight(130)
+                    self.EditBox:SetWidth(290)
+                    self.EditBox:SetHeight(20)
+                    self.EditBox:Show()
+                    if self.CustomEditBox then
+                        self.CustomEditBox:Hide()
+                        self.CustomEditBG:Hide()
+                    end
+                end,
+                timeout = 0,
+                whileDead = true,
+                hideOnEscape = true,
+            }
+            StaticPopup_Show("BASTION_COPY_TALENTS")
+            Bastion:Print("|cFFFFCC00[推荐天赋]|r 已拉起复制框，请按 Ctrl+C 复制天赋导入字符串。")
+        end
+    },
+    
     -- 防御阈值
     { type = "header", label = "Defensive Thresholds", labelZh = "防御阈值" },
     { key = "survival_hp", type = "slider", label = "Survival Instincts HP%", labelZh = "生存本能血量%", min = 10, max = 80, step = 5, default = 35 },
