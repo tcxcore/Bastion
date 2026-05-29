@@ -267,8 +267,7 @@ function Unit:IsBoss()
     end
 
     for i = 1, 5 do
-        local bossGUID = UnitGUID("boss" .. i)
-        if self:GetGUID() == bossGUID then
+        if UnitIsUnit(self:GetOMToken(), "boss" .. i) then
             return true
         end
     end
