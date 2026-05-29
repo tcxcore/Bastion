@@ -38,7 +38,8 @@ local Spell = {
     OnCastFunc = false,
     PostCastFunc = false,
     lastCastAttempt = false,
-    wasLooking = false,
+    mRightButton = false,
+    mLeftButton = false,
     lastCastAt = false,
     conditions = {},
     target = false,
@@ -243,16 +244,29 @@ function Spell:Cast(unit, condition)
         return false
     end
 
+    if unit and unit:IsValid() then
+        local player = Bastion.UnitManager:Get("player")
+        if not self:IsInRange(unit) then
+            return false
+        end
+        -- 自己对自己施法不需要判定视野
+        if not player:IsUnit(unit) and not player:CanSee(unit) then
+            return false
+        end
+    end
+
     -- Call pre cast function
     if self:GetPreCastFunction() then
         self:GetPreCastFunction()(self)
     end
 
-    -- Check if the mouse was looking
-    self.wasLooking = IsMouselooking()
+    -- 记录施法前真实的鼠标物理按键状态
+    self.mRightButton = IsMouseButtonDown("RightButton")
+    self.mLeftButton = IsMouseButtonDown("LeftButton")
 
     -- 施放法术（默认使用名字施放，个别无法用名字的法术在脚本层用 ID 单独处理）
-    TCX.Unlock("CastSpellByName", self:GetName(), unit:GetOMToken())
+    local token = unit and unit:IsValid() and type(unit.GetOMToken) == "function" and unit:GetOMToken() or nil
+    TCX.Unlock("CastSpellByName", self:GetName(), token)
     TCX.Unlock("SpellCancelQueuedSpell")
 
     Bastion:Debug("Casting", self)
@@ -278,11 +292,13 @@ function Spell:ForceCast(unit)
     --     self:GetPreCastFunction()(self)
     -- end
 
-    -- Check if the mouse was looking
-    self.wasLooking = IsMouselooking()
+    -- 记录施法前真实的鼠标物理按键状态
+    self.mRightButton = IsMouseButtonDown("RightButton")
+    self.mLeftButton = IsMouseButtonDown("LeftButton")
 
     -- 施放法术（默认使用名字施放，个别无法用名字的法术在脚本层用 ID 单独处理）
-    TCX.Unlock("CastSpellByName", self:GetName(), unit:GetOMToken())
+    local token = unit and unit:IsValid() and type(unit.GetOMToken) == "function" and unit:GetOMToken() or nil
+    TCX.Unlock("CastSpellByName", self:GetName(), token)
     TCX.Unlock("SpellCancelQueuedSpell")
 
     Bastion:Debug("Casting", self)
@@ -396,11 +412,6 @@ function Spell:OnCast(func)
     return self
 end
 
--- Get was looking
----@return boolean
-function Spell:GetWasLooking()
-    return self.wasLooking
-end
 
 -- Click the spell
 ---@param x number|Vector3
@@ -413,11 +424,13 @@ function Spell:Click(x, y, z)
     end
     -- SpellIsTargeting() 返回 true 表示法术处于 AOE 等待鼠标选点状态
     if SpellIsTargeting() then
-        MouselookStop()
         -- TCX 使用 ClickPosition 进行 AOE 落点点击
         TCX.ClickPosition(x, y, z)
-        if self:GetWasLooking() then
-            MouselookStart()
+        -- 恢复鼠标按键状态
+        if self.mRightButton then
+            TCX.Unlock("TurnOrActionStart")
+        elseif self.mLeftButton then
+            TCX.Unlock("CameraOrSelectOrMoveStart")
         end
         return true
     end
