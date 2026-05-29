@@ -251,7 +251,7 @@ function Spell:Cast(unit, condition)
     -- Check if the mouse was looking
     self.wasLooking = IsMouselooking()
 
-    -- 施放法术（TCX 环境需要 Unlock 解锁保护函数）
+    -- 施放法术（默认使用名字施放，个别无法用名字的法术在脚本层用 ID 单独处理）
     TCX.Unlock("CastSpellByName", self:GetName(), unit:GetOMToken())
     TCX.Unlock("SpellCancelQueuedSpell")
 
@@ -281,7 +281,7 @@ function Spell:ForceCast(unit)
     -- Check if the mouse was looking
     self.wasLooking = IsMouselooking()
 
-    -- 施放法术（TCX 环境需要 Unlock 解锁保护函数）
+    -- 施放法术（默认使用名字施放，个别无法用名字的法术在脚本层用 ID 单独处理）
     TCX.Unlock("CastSpellByName", self:GetName(), unit:GetOMToken())
     TCX.Unlock("SpellCancelQueuedSpell")
 
@@ -462,10 +462,19 @@ end
 function Spell:IsInRange(unit)
     local IsSpellInRange = C_Spell.IsSpellInRange and C_Spell.IsSpellInRange or IsSpellInRange
     local hasRange = self:HasRange()
-    local inRange = IsSpellInRange(self:GetName(), unit:GetOMToken())
 
     if hasRange == false then
         return true
+    end
+
+    local inRange
+    if C_Spell.IsSpellInRange then
+        inRange = IsSpellInRange(self:GetID(), unit:GetOMToken())
+    else
+        local name = self:GetName()
+        if name then
+            inRange = IsSpellInRange(name, unit:GetOMToken())
+        end
     end
 
     if inRange == 1 or inRange == true then

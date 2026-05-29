@@ -12,8 +12,8 @@ end
 local _orig_UnitChannelInfo = _G.UnitChannelInfo
 local function UnitChannelInfo(unit)
     if not _orig_UnitChannelInfo then return end
-    local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, notInterruptible, spellId, numStages = _orig_UnitChannelInfo(unit)
-    return name, text, texture, _u(startTimeMS), _u(endTimeMS), _u(isTradeSkill), _u(notInterruptible), _u(spellId), _u(numStages)
+    local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, notInterruptible, spellId, unk9, numStages = _orig_UnitChannelInfo(unit)
+    return name, text, texture, _u(startTimeMS), _u(endTimeMS), _u(isTradeSkill), _u(notInterruptible), _u(spellId), unk9, _u(numStages)
 end
 
 local _orig_GetSpellCooldown = _G.GetSpellCooldown
@@ -1171,15 +1171,18 @@ end
 
 function Unit:GetEmpoweredStage()
     local stage = 0
-    local _, _, _, startTime, _, _, _, spellID, _, numStages = UnitChannelInfo(self:GetOMToken())
+    -- 注意：在 Unit.lua 中 UnitChannelInfo 已被重写，返回的 startTime 和 numStages 是解密后的数字
+    local chanName, _, _, startTime, _, _, _, spellID, _, numStages = UnitChannelInfo(self:GetOMToken())
 
     if numStages and numStages > 0 then
-        startTime = startTime / 1000
+        -- startTime 已经是解密后的数值，直接转秒
+        local start = startTime / 1000
         local currentTime = GetTime()
         local stageDuration = 0
         for i = 1, numStages do
-            stageDuration = stageDuration + GetUnitEmpowerStageDuration((self:GetOMToken()), i - 1) / 1000
-            if startTime + stageDuration > currentTime then
+            -- GetUnitEmpowerStageDuration 没有被重写，返回的是加密对象，需要使用 _u 解密
+            stageDuration = stageDuration + _u(GetUnitEmpowerStageDuration((self:GetOMToken()), i - 1)) / 1000
+            if start + stageDuration > currentTime then
                 break
             end
             stage = i
