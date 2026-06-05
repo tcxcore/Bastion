@@ -2,6 +2,9 @@
 
 基于 [4n0n/Bastion](https://git.tinkr.site/4n0n/bastion) 框架，完整适配 TCX-Retail/TCX Core 内存直接交互架构。
 
+TCX LUA Unlocker: https://tcxcore.com
+TCX Discord: https://discord.gg/6UGp9umUUf
+
 ## TCX 适配变更
 
 ### 核心架构
