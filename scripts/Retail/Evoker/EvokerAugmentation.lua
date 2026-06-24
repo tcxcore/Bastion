@@ -240,11 +240,10 @@ local function CastFireBreath(unit)
 end
 
 -- 5.6. 亘古吐息专用施放 (该技能 ID 不被框架 IsKnownAndUsable 正确识别，绕过检查)
-local _u = Bastion.TCX.Unwrap
 local function CastBreathOfEons(unit)
     -- 简单 CD 检查
     local info = C_Spell.GetSpellCooldown(BreathOfEons:GetID())
-    if info and _u(info.duration) > 0 then return false end
+    if info and info.duration > 0 then return false end
     Bastion.TCX.Unlock("CastSpellByName", "亘古吐息", unit:GetOMToken())
     Bastion.TCX.Unlock("SpellCancelQueuedSpell")
     return true
@@ -404,14 +403,14 @@ M:Sync(function()
             local chanName, _, _, _, _, _, _, chanSpellID = UnitChannelInfo("player")
             
             local targetStage = 1
-            if chanSpellID and _u(chanSpellID) == FireBreath:GetID() then
+            if chanSpellID and chanSpellID == FireBreath:GetID() then
                 targetStage = M:GetSetting("fireBreathStage")
             else
                 targetStage = M:GetSetting("upheavalStage")
             end
 
             if empStage >= targetStage then
-                if chanSpellID and _u(chanSpellID) == FireBreath:GetID() then
+                if chanSpellID and chanSpellID == FireBreath:GetID() then
                     -- 火焰吐息：/cast 无法释放，用 /click 动作条按钮释放
                     local btnName = FindFireBreathButton()
                     if btnName then
@@ -475,7 +474,7 @@ M:Sync(function()
             end
             -- Cast 失败 (GCD 中)：检查是否只是 GCD 阻挡，若是则阻止其他技能直到黑檀释放
             local cdInfo = C_Spell.GetSpellCooldown(EbonMight:GetID())
-            local cd = cdInfo and _u(cdInfo.duration) or 0
+            local cd = cdInfo and cdInfo.duration or 0
             if cd <= 1.5 then
                 return  -- 仅 GCD 阻挡，等待下一 tick 优先释放黑檀
             end
@@ -573,7 +572,7 @@ M:Sync(function()
 
         -- 获取黑檀之力的剩余冷却时间，如果小于10秒，则保留蓄力技能等黑檀
         local emCdInfo = C_Spell.GetSpellCooldown(EbonMight:GetID())
-        local emCd = emCdInfo and _u(emCdInfo.duration) or 0
+        local emCd = emCdInfo and emCdInfo.duration or 0
         local holdForEM = emCd > 0 and emCd < 10
 
         -- 1. 精华迸发触发时，免费施放喷发 (瞬发)

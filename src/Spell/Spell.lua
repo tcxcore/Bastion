@@ -1,33 +1,23 @@
 local _, Bastion = ...
 local TCX = Bastion.TCX
-local _u = TCX.Unwrap
-
 local C_Spell = setmetatable({}, { __index = _G.C_Spell })
 if _G.C_Spell then
     C_Spell.GetSpellCooldown = function(spellId)
-        local info = _G.C_Spell.GetSpellCooldown(spellId)
-        if info then _u(info) end
-        return info
+        return TCX.Unlock("C_Spell.GetSpellCooldown", spellId)
     end
     C_Spell.GetSpellCharges = function(spellId)
-        local info = _G.C_Spell.GetSpellCharges(spellId)
-        if info then _u(info) end
-        return info
+        return TCX.Unlock("C_Spell.GetSpellCharges", spellId)
     end
 end
 
-local _orig_GetSpellCooldown = _G.GetSpellCooldown
 local function GetSpellCooldown(spellId)
-    if not _orig_GetSpellCooldown then return end
-    local start, duration, enabled, modRate = _orig_GetSpellCooldown(spellId)
-    return _u(start), _u(duration), _u(enabled), modRate
+    if not _G.GetSpellCooldown then return end
+    return TCX.Unlock("GetSpellCooldown", spellId)
 end
 
-local _orig_GetSpellCharges = _G.GetSpellCharges
 local function GetSpellCharges(spellId)
-    if not _orig_GetSpellCharges then return end
-    local charges, maxCharges, chargeStart, chargeDuration, modRate = _orig_GetSpellCharges(spellId)
-    return _u(charges), _u(maxCharges), _u(chargeStart), _u(chargeDuration), modRate
+    if not _G.GetSpellCharges then return end
+    return TCX.Unlock("GetSpellCharges", spellId)
 end
 
 -- Create a new Spell class
@@ -346,16 +336,16 @@ function Spell:IsCurrent()
     -- 1. 标准当前施法状态检测 (针对近战自动攻击等)
     local isCurrent = false
     if C_Spell.IsCurrentSpell then
-        isCurrent = _u(C_Spell.IsCurrentSpell(self:GetID()))
+        isCurrent = TCX.Unlock("C_Spell.IsCurrentSpell", self:GetID())
     end
     if isCurrent then return true end
 
     -- 2. 针对远程开关型自动循环物理法术 (如猎人自动射击 75, 丢魔杖等) 进行智能加固检测
     local isAutoRepeat = false
     if C_Spell.IsAutoRepeatSpell then
-        isAutoRepeat = _u(C_Spell.IsAutoRepeatSpell(self:GetID()))
+        isAutoRepeat = TCX.Unlock("C_Spell.IsAutoRepeatSpell", self:GetID())
     elseif IsAutoRepeatSpell then
-        isAutoRepeat = _u(IsAutoRepeatSpell(self:GetID()))
+        isAutoRepeat = TCX.Unlock("IsAutoRepeatSpell", self:GetID())
     end
 
     return isAutoRepeat or false
@@ -424,12 +414,16 @@ function Spell:Click(x, y, z)
     end
     -- SpellIsTargeting() 返回 true 表示法术处于 AOE 等待鼠标选点状态
     if SpellIsTargeting() then
+        -- 实时读取当前鼠标物理按键状态（而非 Cast() 时的快照）
+        -- 解决读条地面技能期间用户改变鼠标按键状态导致恢复错误的问题
+        local rightNow = IsMouseButtonDown("RightButton")
+        local leftNow = IsMouseButtonDown("LeftButton")
         -- TCX 使用 ClickPosition 进行 AOE 落点点击
         TCX.ClickPosition(x, y, z)
-        -- 恢复鼠标按键状态
-        if self.mRightButton then
+        -- 基于当前时刻的真实鼠标状态恢复锁定
+        if rightNow then
             TCX.Unlock("TurnOrActionStart")
-        elseif self.mLeftButton then
+        elseif leftNow then
             TCX.Unlock("CameraOrSelectOrMoveStart")
         end
         return true

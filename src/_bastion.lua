@@ -172,17 +172,25 @@ function Bastion.Bootstrap()
         if ok and u then u:GetAuras():OnUpdate(auras) end
     end)
 
-    Bastion.Globals.EventManager:RegisterWoWEvent("UNIT_SPELLCAST_SUCCEEDED",
-                                                  function(...)
-        local unit, castGUID, spellID = ...
+    Bastion.Globals.EventManager:RegisterWoWEvent("COMBAT_LOG_EVENT_UNFILTERED", function()
+        local timestamp, subevent, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellID = C_Timer.TCX.GetCurrentEventInfo()
 
-        local spell = Bastion.Globals.SpellBook:GetIfRegistered(spellID)
+        if subevent == "SPELL_CAST_SUCCESS" then
+            local spell = Bastion.Globals.SpellBook:GetIfRegistered(spellID)
+            
+            -- 判断 sourceGUID 是否为 player
+            local isPlayer = false
+            local p = Bastion.UnitManager['player']
+            if p and p:GetGUID() == sourceGUID then
+                isPlayer = true
+            end
 
-        if unit == "player" and spell then
-            spell.lastCastAt = GetTime()
+            if isPlayer and spell then
+                spell.lastCastAt = GetTime()
 
-            if spell:GetPostCastFunction() then
-                spell:GetPostCastFunction()(spell)
+                if spell:GetPostCastFunction() then
+                    spell:GetPostCastFunction()(spell)
+                end
             end
         end
     end)

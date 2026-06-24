@@ -17,7 +17,6 @@ end
 -- Get a spell from the spellbook
 ---@return Spell
 function SpellBook:GetSpell(id)
-    id = TCX.Unwrap(id)
     if self.spells[id] == nil then
         self.spells[id] = Bastion.Spell:New(id)
     end
@@ -60,7 +59,6 @@ end
 
 ---@return Spell
 function SpellBook:GetIfRegistered(id)
-    id = TCX.Unwrap(id)
     return self.spells[id]
 end
 

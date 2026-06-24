@@ -31,10 +31,7 @@ else
     TCX.era = false
 end
 
--- Unwrap解密，只有正式服需要
-if Bastion.Build ~= "Retail" then
-    TCX.Unwrap = function(v) return v end
-end
+
 
 -- ----------------------------------------------------------
 -- 兼容字段（原 Tinkr.classic/era/Common）

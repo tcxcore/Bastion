@@ -1,13 +1,12 @@
 local _, Bastion = ...
 local TCX = Bastion.TCX
-local _u = TCX.Unwrap
-
 local C_UnitAuras = setmetatable({}, { __index = _G.C_UnitAuras })
 if _G.C_UnitAuras then
     C_UnitAuras.GetAuraDataByAuraInstanceID = function(unit, id)
-        local info = _G.C_UnitAuras.GetAuraDataByAuraInstanceID(unit, id)
-        if info then _u(info) end
-        return info
+        return TCX.Unlock("C_UnitAuras.GetAuraDataByAuraInstanceID", unit, id)
+    end
+    C_UnitAuras.GetAuraDataByIndex = function(unit, index, filter)
+        return TCX.Unlock("C_UnitAuras.GetAuraDataByIndex", unit, index, filter)
     end
 end
 
@@ -36,50 +35,9 @@ end
 ---@param auras UnitAuraUpdateInfo
 ---@return nil
 function AuraTable:OnUpdate(auras)
-    if not auras then
-        self:Update()
-        return
-    end
-    local isFullUpdate = auras.isFullUpdate
-
-    if isFullUpdate then
-        self:Update()
-        return
-    end
-
-    local removedAuras = auras.removedAuraInstanceIDs
-    local addedAuras = auras.addedAuras
-    local updatedAuras = auras.updatedAuraInstanceIDs
-
-    -- Add auras
-    if addedAuras and #addedAuras > 0 then
-        for i = 1, #addedAuras do
-            local aura = Bastion.Aura:CreateFromUnitAuraInfo(addedAuras[i])
-
-            self:AddOrUpdateAuraInstanceID(aura:GetAuraInstanceID(), aura)
-        end
-    end
-
-    -- DevTools_Dump(addedAuras)
-    if updatedAuras and #updatedAuras > 0 then
-        for i = 1, #updatedAuras do
-            local id = updatedAuras[i]
-            local token = self.unit:GetOMToken()
-            if not token then return end
-            local newAura = C_UnitAuras.GetAuraDataByAuraInstanceID(token, id);
-            if newAura then
-                local aura = Bastion.Aura:CreateFromUnitAuraInfo(newAura)
-                self:AddOrUpdateAuraInstanceID(aura:GetAuraInstanceID(), aura)
-            end
-        end
-    end
-
-    -- Remove auras
-    if removedAuras and #removedAuras > 0 then
-        for i = 1, #removedAuras do
-            self:RemoveInstanceID(removedAuras[i])
-        end
-    end
+    -- 由于原有的 UNIT_AURA 参数带 secret values 且我们移除了 Unwrap，
+    -- 这里忽略增量参数，直接对光环进行全量更新。全量更新内部调用的是已 Unlock 的 AuraUtil_ForEachAura。
+    self:Update()
 end
 
 ---@param instanceID number
@@ -167,13 +125,17 @@ function AuraTable:GetUnitBuffs()
     local token = self.unit:GetOMToken()
     if not token then return end
 
-    AuraUtil.ForEachAura(token, 'HELPFUL', nil, function(a)
-        local aura = Bastion.Aura:CreateFromUnitAuraInfo(a)
+    local i = 1
+    while true do
+        local a = C_UnitAuras.GetAuraDataByIndex(token, i, 'HELPFUL')
+        if not a then break end
 
+        local aura = Bastion.Aura:CreateFromUnitAuraInfo(a)
         if aura:IsValid() then
             self:AddOrUpdateAuraInstanceID(aura:GetAuraInstanceID(), aura)
         end
-    end, true)
+        i = i + 1
+    end
 end
 
 -- Get a units debuffs
@@ -209,13 +171,17 @@ function AuraTable:GetUnitDebuffs()
     local token = self.unit:GetOMToken()
     if not token then return end
 
-    AuraUtil.ForEachAura(token, 'HARMFUL', nil, function(a)
-        local aura = Bastion.Aura:CreateFromUnitAuraInfo(a)
+    local i = 1
+    while true do
+        local a = C_UnitAuras.GetAuraDataByIndex(token, i, 'HARMFUL')
+        if not a then break end
 
+        local aura = Bastion.Aura:CreateFromUnitAuraInfo(a)
         if aura:IsValid() then
             self:AddOrUpdateAuraInstanceID(aura:GetAuraInstanceID(), aura)
         end
-    end, true)
+        i = i + 1
+    end
 end
 
 -- Update auras

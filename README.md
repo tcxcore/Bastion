@@ -12,16 +12,18 @@ TCX Discord: https://discord.gg/6UGp9umUUf
   - `string` 类型（`"player"`, `"target"` 等标准 Token）→ 直接返回
   - `lightuserdata` 类型（TCX.Objects() 返回的内存指针）→ 通过 `ObjectToken()` 转换
   - 对象失效时返回 `nil`，防止无效指针传入原生 API
-- **TCX Unwrap 集成**：所有原生 API 返回值（`UnitPower`, `UnitCastingInfo`, `UnitChannelInfo` 等）的暴雪 taint 加密值均在框架层通过 `_u()` 自动解密
+- **TCX Unlock 集成**：全面废除原有的手动 `_u()` (Unwrap) 解密操作。所有获取属性与光环信息的原生调用（如 `UnitPower`, `UnitCastingInfo`, `C_UnitAuras` 等）均被重构为利用 `C_Timer.TCX.Unlock("...", ...)` 入口直接向底层发起脱敏请求，在获取数据源头即避开 Taint 污染与 Secret 保护。
 
 ### 框架模块变更
 
 | 模块 | 变更说明 |
 |------|---------|
-| `Unit.lua` | 重写 `GetOMToken()`，适配 lightuserdata 指针；`GetPower/GetMaxPower/GetPowerType` 改用原生 API + Unwrap；修复 `IsOutdoors()` 的 and/or 短路 bug；`UnitCastingInfo/UnitChannelInfo` wrapper 对所有返回值做 Unwrap（修复零售服返回10个值导致的numStages丢失问题）；重构修复 `GetEmpoweredStage()` 的解包逻辑 |
+| `Unit.lua` | 重写 `GetOMToken()`，适配 lightuserdata 指针；各项能量、施法状态、引导状态的获取全面改用 `TCX.Unlock` 获取以绕过底层污染并修复返回字段问题。 |
 | `ObjectManager.lua` | 每帧更新缓存对象的内存指针（`unit.unit = object`）；失效对象 Token 检查跳过 |
-| `AuraTable.lua` | `GetUnitBuffs/GetUnitDebuffs/OnUpdate` 添加 Token nil 保护 |
-| `Spell.lua` | 新增 `Spell:IsCurrent()` 方法（封装 `C_Spell.IsCurrentSpell` + Unwrap） |
+| `AuraTable.lua` & `Aura.lua` | 废弃原生 `AuraUtil.ForEachAura`，重构为使用 `TCX.Unlock("C_UnitAuras.GetAuraDataByIndex")` 的底层循环遍历，彻底解决光环查询回调的 Secret Keys 报错；全量更新与 Token 保护。 |
+| `Spell.lua` | 新增 `Spell:IsCurrent()` 等方法，所有法术 CD 及可用性检测均使用 `TCX.Unlock` 封装。 |
+| `EventManager.lua` | 建立脱敏桥接架构：将核心事件侦听 Frame 的创建和 `RegisterEvent` 挪入 `C_Timer.TCX.RunScript` 之中独立执行，完全解决 `COMBAT_LOG_EVENT_UNFILTERED` 被安全插件拦截引发的 Taint (`ADDON_ACTION_FORBIDDEN`) 报错。 |
+| `_bastion.lua` | 以脱敏的 `COMBAT_LOG_EVENT_UNFILTERED` 配合 `C_Timer.TCX.GetCurrentEventInfo()` 替代 `UNIT_SPELLCAST_SUCCEEDED` 来获取未污染的 `spellID`，精确触发后摇回调。 |
 | `Vector3.lua` | `FastDistance` 替换为 `math.sqrt` 原生实现 |
 | `Item.lua` | `FastDistance` 替换为 `math.sqrt` 原生实现 |
 | `TCXAdapter/` | 新增 TCX 兼容适配层，映射 `Object/Objects/ObjectGUID` 等全局函数 |

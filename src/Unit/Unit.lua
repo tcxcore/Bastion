@@ -1,26 +1,18 @@
 local _, Bastion = ...
 local TCX = Bastion.TCX
-local _u = TCX.Unwrap
-
-local _orig_UnitCastingInfo = _G.UnitCastingInfo
 local function UnitCastingInfo(unit)
-    if not _orig_UnitCastingInfo then return end
-    local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, notInterruptible, spellId = _orig_UnitCastingInfo(unit)
-    return name, text, texture, _u(startTimeMS), _u(endTimeMS), _u(isTradeSkill), _u(castID), _u(notInterruptible), _u(spellId)
+    if not _G.UnitCastingInfo then return end
+    return TCX.Unlock("UnitCastingInfo", unit)
 end
 
-local _orig_UnitChannelInfo = _G.UnitChannelInfo
 local function UnitChannelInfo(unit)
-    if not _orig_UnitChannelInfo then return end
-    local name, text, texture, startTimeMS, endTimeMS, isTradeSkill, notInterruptible, spellId, unk9, numStages = _orig_UnitChannelInfo(unit)
-    return name, text, texture, _u(startTimeMS), _u(endTimeMS), _u(isTradeSkill), _u(notInterruptible), _u(spellId), unk9, _u(numStages)
+    if not _G.UnitChannelInfo then return end
+    return TCX.Unlock("UnitChannelInfo", unit)
 end
 
-local _orig_GetSpellCooldown = _G.GetSpellCooldown
 local function GetSpellCooldown(spellId)
-    if not _orig_GetSpellCooldown then return end
-    local start, duration, enabled, modRate = _orig_GetSpellCooldown(spellId)
-    return _u(start), _u(duration), _u(enabled), modRate
+    if not _G.GetSpellCooldown then return end
+    return TCX.Unlock("GetSpellCooldown", spellId)
 end
 
 -- Create a new Unit class
@@ -171,21 +163,21 @@ end
 -- Get the units power type
 ---@return number
 function Unit:GetPowerType()
-    return _u(UnitPowerType(self:GetOMToken()))
+    return TCX.Unlock("UnitPowerType", self:GetOMToken())
 end
 
 -- Get the units power
 ---@param powerType number | nil
 ---@return number
 function Unit:GetPower(powerType)
-    return _u(UnitPower(self:GetOMToken(), powerType))
+    return TCX.Unlock("UnitPower", self:GetOMToken(), powerType)
 end
 
 -- Get the units max power
 ---@param powerType number | nil
 ---@return number
 function Unit:GetMaxPower(powerType)
-    return _u(UnitPowerMax(self:GetOMToken(), powerType))
+    return TCX.Unlock("UnitPowerMax", self:GetOMToken(), powerType)
 end
 
 -- Get the units power percentage
@@ -993,7 +985,7 @@ end
 function Unit:WatchForSwings()
     Bastion.Globals.EventManager:RegisterWoWEvent("COMBAT_LOG_EVENT_UNFILTERED", function()
         local _, subtype, _, sourceGUID, sourceName, _, _, destGUID, destName, destFlags, _, spellID, spellName, _, amount, interrupt, a, b, c, d, offhand, multistrike =
-            CombatLogGetCurrentEventInfo()
+            C_Timer.TCX.GetCurrentEventInfo()
 
         if sourceGUID == self:GetGUID() then
             if subtype == "SPELL_ENERGIZE" and spellID == 196911 then
@@ -1179,8 +1171,8 @@ function Unit:GetEmpoweredStage()
         local currentTime = GetTime()
         local stageDuration = 0
         for i = 1, numStages do
-            -- GetUnitEmpowerStageDuration 没有被重写，返回的是加密对象，需要使用 _u 解密
-            stageDuration = stageDuration + _u(GetUnitEmpowerStageDuration((self:GetOMToken()), i - 1)) / 1000
+            -- GetUnitEmpowerStageDuration 返回的是加密对象，使用 Unlock
+            stageDuration = stageDuration + TCX.Unlock("GetUnitEmpowerStageDuration", self:GetOMToken(), i - 1) / 1000
             if start + stageDuration > currentTime then
                 break
             end

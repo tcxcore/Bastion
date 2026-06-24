@@ -17,16 +17,13 @@ function EventManager:New()
     self.eventHandlers = {}
     self.wowEventHandlers = {}
 
-    -- Frame for wow events
-    self.frame = CreateFrame("Frame")
-
-    self.frame:SetScript('OnEvent', function(f, event, ...)
+    _G.Bastion_OnSecureWoWEvent = function(event, ...)
         if self.wowEventHandlers[event] then
             for _, callback in ipairs(self.wowEventHandlers[event]) do
                 callback(...)
             end
         end
-    end)
+    end
 
     return self
 end
@@ -50,7 +47,18 @@ end
 function EventManager:RegisterWoWEvent(event, handler)
     if not self.wowEventHandlers[event] then
         self.wowEventHandlers[event] = {}
-        self.frame:RegisterEvent(event)
+        local scriptStr = string.format([[
+            if not _G.BastionSecureEventFrame then
+                _G.BastionSecureEventFrame = CreateFrame("Frame")
+                _G.BastionSecureEventFrame:SetScript("OnEvent", function(self, event, ...)
+                    if _G.Bastion_OnSecureWoWEvent then
+                        _G.Bastion_OnSecureWoWEvent(event, ...)
+                    end
+                end)
+            end
+            _G.BastionSecureEventFrame:RegisterEvent("%s")
+        ]], event)
+        C_Timer.TCX.RunScript(scriptStr)
     end
 
     table.insert(self.wowEventHandlers[event], handler)

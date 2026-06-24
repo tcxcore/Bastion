@@ -278,10 +278,16 @@ function Item:Click(x, y, z)
     end
     -- SpellIsTargeting() 返回 true 表示法术处于 AOE 等待鼠标选点状态
     if SpellIsTargeting() then
-        MouselookStop()
+        -- 实时读取当前鼠标物理按键状态（而非 Use() 时的快照）
+        local rightNow = IsMouseButtonDown("RightButton")
+        local leftNow = IsMouseButtonDown("LeftButton")
+        -- TCX 使用 ClickPosition 进行 AOE 落点点击
         TCX.ClickPosition(x, y, z)
-        if self:GetWasLooking() then
-            MouselookStart()
+        -- 基于当前时刻的真实鼠标状态恢复锁定
+        if rightNow then
+            TCX.Unlock("TurnOrActionStart")
+        elseif leftNow then
+            TCX.Unlock("CameraOrSelectOrMoveStart")
         end
         return true
     end
