@@ -205,7 +205,7 @@ GuardianModule:Sync(function()
 
     -- ==================== 打断 ====================
     if GuardianModule:GetSetting("auto_interrupt") then
-        if Target:IsInterruptible() and Target:GetDistance(Player) <= 13 and Player:IsFacing(Target) then
+        if Target:IsInterruptible() and Player:IsWithinCombatDistance(Target, 13) and Player:IsFacing(Target) then
             if SkullBash:IsKnownAndUsable() then
                 SkullBash:Cast(Target)
                 return
@@ -295,7 +295,7 @@ GuardianModule:Sync(function()
     -- ==================== 艾露恩神选者 核心输出循环 ====================
     
     -- 1. 明月普照 (Lunar Beam) - WCL核心爆发，卡CD用
-    if LunarBeam:IsKnownAndUsable() and (Player:InMelee(Target) or Target:GetDistance(Player) <= 8) then
+    if LunarBeam:IsKnownAndUsable() and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
         if LunarBeam:Cast(Player) then return end
     end
 
@@ -303,7 +303,7 @@ GuardianModule:Sync(function()
     local hasTooth = Player:GetAuras():FindMy(ToothAndClawBuff):IsUp()
     if hasTooth or rage >= 80 then
         if Raze:IsKnown() then
-            if Raze:IsKnownAndUsable() and Target:GetDistance(Player) <= 8 and Player:IsFacing(Target) then
+            if Raze:IsKnownAndUsable() and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) and Player:IsFacing(Target) then
                 if Raze:Cast(Target) then return end
             end
         else
@@ -314,7 +314,7 @@ GuardianModule:Sync(function()
     end
 
     -- 3. 痛击 (Thrash) - 最高优先级填充，卡CD获取怒气 (360度周身群拉)
-    if Thrash:IsKnownAndUsable() and Target:GetDistance(Player) <= 8 then
+    if Thrash:IsKnownAndUsable() and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
         if Thrash:Cast(Player) then return end
     end
 
@@ -326,7 +326,7 @@ GuardianModule:Sync(function()
     -- 5. 低优先级 摧折 (Raze) / 重殴 (Maul) - 常规泄怒 (加入面向判定)
     if rage >= 40 and GetIronfurStacks() >= 1 then
         if Raze:IsKnown() then
-            if Raze:IsKnownAndUsable() and Target:GetDistance(Player) <= 8 and Player:IsFacing(Target) then
+            if Raze:IsKnownAndUsable() and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) and Player:IsFacing(Target) then
                 if Raze:Cast(Target) then return end
             end
         else
@@ -340,13 +340,13 @@ GuardianModule:Sync(function()
     if Player:GetAuras():FindMy(GalacticGuardianBuff):IsUp()
         or not Target:GetAuras():FindMy(MoonfireDot):IsUp()
         or Target:GetAuras():FindMy(MoonfireDot):GetRemainingTime() < 3 then
-        if Moonfire:IsKnownAndUsable() and Target:GetDistance(Player) <= 40 and Player:IsFacing(Target) then
+        if Moonfire:IsKnownAndUsable() and Player:IsWithinCombatDistance(Target, 40) and Player:IsFacing(Target) then
             if Moonfire:Cast(Target) then return end
         end
     end
 
     -- 7. 横扫 (Swipe) - 无事可做的底层填充 (360度周身群拉)
-    if Swipe:IsKnownAndUsable() and Target:GetDistance(Player) <= 8 then
+    if Swipe:IsKnownAndUsable() and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
         if Swipe:Cast(Target) then return end
     end
 

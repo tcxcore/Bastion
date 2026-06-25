@@ -184,7 +184,7 @@ local function GetEnemyCount(range)
     range = range or 8
     local count = 0
     Bastion.UnitManager:EnumUnits(function(unit)
-        if unit:IsAlive() and unit:IsEnemy() and Target:GetDistance(unit) <= range then
+        if unit:IsAlive() and unit:IsEnemy() and Target:IsWithinCombatDistance(unit, range) then
             count = count + 1
         end
         return false
@@ -318,7 +318,7 @@ M:Sync(function()
     -- 如果侦测到多目标，且技能可用，使用 Cast(nil) + Click 精准群挂 DoT
     local crashSpell = GetShadowCrash()
     if isAOE and crashSpell:IsKnown() then
-        if Target:GetDistance() <= 40 then
+        if Player:IsWithinCombatDistance(Target, 40) then
             if crashSpell:Cast(nil) then
                 crashSpell:Click(Target:GetPosition())
                 return

@@ -455,7 +455,7 @@ M:Sync(function()
     local hp = Target:GetHP()
     local hasSD = HasSuddenDeath()
     if (hp <= 35 or hasSD) then
-        if Player:InMelee(Target) or (Target:GetDistance(Player) <= 8) then
+        if Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8) then
             if Execute:GetCooldown() == 0 then
                 if Execute:ForceCast(Target) then return end
             end
@@ -464,7 +464,7 @@ M:Sync(function()
 
     -- 3. 触发“殒命在即 (Imminent Demise)” Buff 达到 3 层时，高优施放剑刃风暴
     if HasImminentDemise() and Bladestorm:IsKnownAndUsable() then
-        if Player:InMelee(Target) or (Target:GetDistance(Player) <= 8) then
+        if Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8) then
             Bastion:Print("|cFF00FF00[狂怒战士]|r 触发3层殒命在即 Buff，施放剑刃风暴！")
             if Bladestorm:Cast(Target) then return end
         end
@@ -484,14 +484,14 @@ M:Sync(function()
     if M:GetSetting("useCooldowns") and Player:IsAffectingCombat() and IsEnraged() then
         -- 1. 奥丁之怒 (Odyn's Fury) - 优化距离校验与自我施法
         if OdynsFury:IsKnownAndUsable() then
-            if Player:InMelee(Target) or (Target:GetDistance(Player) <= 8) then
+            if Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8) then
                 if OdynsFury:Cast(Target) then return end
             end
         end
 
         -- 2. 剑刃风暴 (Bladestorm) - 优化距离校验与对自身施法 (自我AOE技能)
         if Bladestorm:IsKnownAndUsable() then
-            if Player:InMelee(Target) or (Target:GetDistance(Player) <= 8) then
+            if Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8) then
                 if Bladestorm:Cast(Player) then return end
             end
         end

@@ -281,7 +281,7 @@ local function GetEnemyCount(range)
     range = range or 8
     local count = 0
     Bastion.UnitManager:EnumUnits(function(unit)
-        if unit:IsAlive() and unit:IsEnemy() and Player:GetDistance(unit) <= range then
+        if unit:IsAlive() and unit:IsEnemy() and Player:IsWithinCombatDistance(unit, range) then
             count = count + 1
         end
         return false
@@ -380,7 +380,7 @@ M:Sync(function()
         -- 冰龙吐息激活判定：
         -- 如果开启了自动吐息，且吐息可用，且能量较为充沛（建议 >= 70点能量），则施放开启吐息！
         if M:GetSetting("useBreath") and BreathOfSindragosa:IsKnown() and not BreathOfSindragosa:IsOnCooldown() and not IsBreathing() then
-            if runicPower >= 70 and (Player:InMelee(Target) or Target:GetDistance(Player) <= 8) then
+            if runicPower >= 70 and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
                 if BreathOfSindragosa:Cast(Player) then return end
             end
         end

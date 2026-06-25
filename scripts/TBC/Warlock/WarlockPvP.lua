@@ -58,7 +58,7 @@ M:Sync(function()
         local totemUnit = nil
         -- 查找周围的敌对单位（使用 EnumUnits 代替 EnumEnemies，因为中立怪物或未进战的图腾不在 Active 列表里）
         Bastion.UnitManager:EnumUnits(function(unit)
-            if unit:IsAlive() and unit:IsEnemy() and Player:GetDistance(unit) <= 40 then
+            if unit:IsAlive() and unit:IsEnemy() and Player:IsWithinCombatDistance(unit, 40) then
                 local name = unit:GetName()
                 if name and (name:find("Totem") or name:find("图腾")) then
                     totemUnit = unit

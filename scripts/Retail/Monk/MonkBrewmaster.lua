@@ -239,12 +239,12 @@ M:Sync(function()
     if M:GetSetting("auto_interrupt") then
         if SpearHandStrike:IsKnownAndUsable() then
             -- 当前目标打断 (加入面向判定)
-            if Target:IsValid() and Target:IsEnemy() and Target:IsInterruptible() and Target:GetDistance(Player) <= 13 and Player:IsFacing(Target) then
+            if Target:IsValid() and Target:IsEnemy() and Target:IsInterruptible() and Player:IsWithinCombatDistance(Target, 13) and Player:IsFacing(Target) then
                 if SpearHandStrike:Cast(Target) then return end
             end
             -- 焦点目标打断 (加入面向判定)
             local focus = Bastion.UnitManager:Get('focus')
-            if focus and focus:IsValid() and focus:IsEnemy() and focus:IsInterruptible() and focus:GetDistance(Player) <= 13 and Player:IsFacing(focus) then
+            if focus and focus:IsValid() and focus:IsEnemy() and focus:IsInterruptible() and Player:IsWithinCombatDistance(focus, 13) and Player:IsFacing(focus) then
                 if SpearHandStrike:Cast(focus) then return end
             end
         end
@@ -253,7 +253,7 @@ M:Sync(function()
     -- 自动群控打断（扫堂腿）
     -- 当身边敌人数 >= 2 且有目标正在施法，并且单体打断不可用时施放扫堂腿
     if M:GetSetting("auto_mass_interrupt") and LegSweep:IsKnownAndUsable() and enemiesCount >= 2 then
-        local targetCasting = Target:IsValid() and Target:IsInterruptible() and Target:GetDistance(Player) <= 5
+        local targetCasting = Target:IsValid() and Target:IsInterruptible() and Player:IsWithinCombatDistance(Target, 5)
         local shouldSweep = targetCasting and not SpearHandStrike:IsKnownAndUsable()
         if shouldSweep then
             if LegSweep:Cast(Player) then return end
@@ -334,13 +334,13 @@ M:Sync(function()
     -- [优先级 3] 火焰之息 (Breath of Fire)
     -- 必须在目标带有醉酿投 Debuff 且我们面对它时施放，以触发减伤 (加入面向判定)
     local isKegSmashed = Target:GetAuras():FindMy(KegSmashDebuff):IsUp()
-    if isKegSmashed and BreathOfFire:IsKnownAndUsable() and Target:GetDistance(Player) <= 8 and Player:IsFacing(Target) then
+    if isKegSmashed and BreathOfFire:IsKnownAndUsable() and Player:IsWithinCombatDistance(Target, 8) and Player:IsFacing(Target) then
         if BreathOfFire:Cast(Player) then return end
     end
 
     -- [优先级 4] 天神灌注 (Celestial Infusion)
     -- 祥和宗师专精的英雄主动大招，卡 CD 极速砸出 (自身Buff，对Player施放)
-    if CelestialInfusion:IsKnownAndUsable() and (Player:InMelee(Target) or Target:GetDistance(Player) <= 8) then
+    if CelestialInfusion:IsKnownAndUsable() and Player:IsWithinCombatDistance(Target, 8) then
         if CelestialInfusion:Cast(Player) then return end
     end
 
@@ -352,7 +352,7 @@ M:Sync(function()
 
     -- [优先级 6] 真气爆裂 (Chi Burst)
     -- 天赋主动技能，作为优秀的拉怪和回能补充 (加入面向判定)
-    if ChiBurst:IsKnownAndUsable() and Target:GetDistance(Player) <= 40 and Player:IsFacing(Target) then
+    if ChiBurst:IsKnownAndUsable() and Player:IsWithinCombatDistance(Target, 40) and Player:IsFacing(Target) then
         if ChiBurst:Cast(Target) then return end
     end
 
@@ -360,7 +360,7 @@ M:Sync(function()
     -- 1. AoE 填充：如果身边敌人数大于等于设定阈值，使用神鹤引项踢填充
     -- 2. 单体填充：能量充足且面对目标时，使用猛虎掌泄能触发和谐涌动 (加入面向判定)
     if enemiesCount >= M:GetSetting("aoe_count") then
-        if SpinningCrane:IsKnownAndUsable() and Target:GetDistance(Player) <= 8 then
+        if SpinningCrane:IsKnownAndUsable() and Player:IsWithinCombatDistance(Target, 8) then
             if SpinningCrane:Cast(Player) then return end
         end
     else

@@ -211,7 +211,7 @@ local function GetEnemyCount(range)
     range = range or 8
     local count = 0
     Bastion.UnitManager:EnumUnits(function(unit)
-        if unit:IsAlive() and unit:IsEnemy() and Target:GetDistance(unit) <= range then
+        if unit:IsAlive() and unit:IsEnemy() and Target:IsWithinCombatDistance(unit, range) then
             count = count + 1
         end
         return false
@@ -296,7 +296,7 @@ M:Sync(function()
 
     -- 自动电能图腾 (群晕)
     if inCombat and isAOE and M:GetSetting("autoCapacitor") then
-        if Target:GetDistance() <= 30 then
+        if Player:IsWithinCombatDistance(Target, 30) then
             if CapacitorTotem:Cast(nil) then
                 CapacitorTotem:Click(Target:GetPosition())
                 Bastion:Print("|cFF00FF00[控制]|r 目标过多，自动施放电能图腾群晕！")
@@ -359,7 +359,7 @@ M:Sync(function()
     -- AOE 时使用地震术 (消耗 55 漩涡)
     if isAOE and maelstrom >= 55 then
         -- 核心Bug就在这里：地面法术的 IsInRange 会被暴雪API返回 nil，导致框架底层把它当成了近战技能！
-        if Target:GetDistance() <= 40 then
+        if Player:IsWithinCombatDistance(Target, 40) then
             -- 必须用 Cast(nil) 来绕过底层框架内部对 Target 的二次 IsInRange 校验
             if Earthquake:Cast(nil) then
                 Earthquake:Click(Target:GetPosition())

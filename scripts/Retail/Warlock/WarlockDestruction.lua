@@ -166,7 +166,7 @@ end
 local function GetEnemiesCount()
     local count = 0
     Bastion.UnitManager:EnumUnits(function(unit)
-        if unit:IsEnemy() and unit:IsAlive() and Target:GetDistance(unit) <= 8 then
+        if unit:IsEnemy() and unit:IsAlive() and Target:IsWithinCombatDistance(unit, 8) then
             count = count + 1
         end
         return false

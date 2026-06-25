@@ -162,7 +162,7 @@ local function GetThrashInfo()
     Bastion.UnitManager:EnumEnemies(function(unit)
         if not unit:GetOMToken() then return false end
         -- 使用 8 码距离判断 AOE 范围
-        if unit:IsAffectingCombat() and Player:GetDistance(unit) <= 8 then
+        if unit:IsAffectingCombat() and Player:IsWithinCombatDistance(unit, 8) then
             enemyCount = enemyCount + 1
             local aura = unit:GetAuras():FindMy(ThrashDot)
             if NeedsRefresh(aura, 15) then
@@ -179,8 +179,7 @@ local function NeedsPrimalWrath()
     local enemyCount = 0
 
     Bastion.UnitManager:EnumEnemies(function(unit)
-        if not unit:GetOMToken() then return false end
-        if unit:IsAffectingCombat() and Player:GetDistance(unit) <= 8 then
+        if unit:IsAffectingCombat() and Player:IsWithinCombatDistance(unit, 8) then
             enemyCount = enemyCount + 1
             local aura = unit:GetAuras():FindMy(RipDot)
             if NeedsRefresh(aura, 24) then
@@ -264,17 +263,17 @@ FeralModule:Sync(function()
         TigersFury:Cast(Player)
     end
 
-    if FeralModule:GetSetting("auto_berserk") and Berserk:IsUsable() and Target:GetDistance() <= 8 then
+    if FeralModule:GetSetting("auto_berserk") and Berserk:IsUsable() and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
         Berserk:Cast(Player)
     end
 
-    if cp <= 1 and FeralFrenzy:IsUsable() and Target:GetDistance() <= 8 then
+    if cp <= 1 and FeralFrenzy:IsUsable() and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
         if Player:GetAuras():FindMy(TigersFury):IsUp() then
             if FeralFrenzy:Cast(Target) then return end
         end
     end
 
-    if FeralModule:GetSetting("auto_convoke") and energy < FeralModule:GetSetting("tigers_fury_energy") and cp <= 3 and Convoke:IsUsable() and Target:GetDistance() <= 8 then
+    if FeralModule:GetSetting("auto_convoke") and energy < FeralModule:GetSetting("tigers_fury_energy") and cp <= 3 and Convoke:IsUsable() and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
         if Convoke:Cast(Player) then return end
     end
 
@@ -287,7 +286,7 @@ FeralModule:Sync(function()
         local needsThrash, _ = GetThrashInfo()
 
         if cp >= 5 then
-            if needsPW and PrimalWrath:IsKnown() and PrimalWrath:IsUsable() and Target:GetDistance() <= 8 then
+            if needsPW and PrimalWrath:IsKnown() and PrimalWrath:IsUsable() and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
                 if PrimalWrath:Cast(Player) then return end
             end
             
@@ -308,7 +307,7 @@ FeralModule:Sync(function()
             return 
         end
 
-        if needsThrash and Thrash:IsUsable() and Target:GetDistance() <= 8 then
+        if needsThrash and Thrash:IsUsable() and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
             if Thrash:Cast(Player) then return end
         end
 
@@ -317,10 +316,10 @@ FeralModule:Sync(function()
             if Rake:Cast(Target) then return end
         end
 
-        if BrutalSlash:IsKnown() and BrutalSlash:IsUsable() and (BrutalSlash:GetCharges() or 0) > 0 and Target:GetDistance() <= 8 then
+        if BrutalSlash:IsKnown() and BrutalSlash:IsUsable() and (BrutalSlash:GetCharges() or 0) > 0 and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
             if BrutalSlash:Cast(Player) then return end
         end
-        if Swipe:IsKnown() and Swipe:IsUsable() and Target:GetDistance() <= 8 then
+        if Swipe:IsKnown() and Swipe:IsUsable() and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
             if Swipe:Cast(Player) then return end
         end
         
@@ -355,7 +354,7 @@ FeralModule:Sync(function()
         end
 
         local thrashAura = Target:GetAuras():FindMy(ThrashDot)
-        if NeedsRefresh(thrashAura, 15) and isClearcasting and Thrash:IsUsable() and Target:GetDistance() <= 8 then
+        if NeedsRefresh(thrashAura, 15) and isClearcasting and Thrash:IsUsable() and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
             if Thrash:Cast(Player) then return end
         end
 
@@ -363,7 +362,7 @@ FeralModule:Sync(function()
             if Shred:Cast(Target) then return end
         end
 
-        if BrutalSlash:IsKnown() and BrutalSlash:IsUsable() and (BrutalSlash:GetCharges() or 0) > 0 and Target:GetDistance() <= 8 then
+        if BrutalSlash:IsKnown() and BrutalSlash:IsUsable() and (BrutalSlash:GetCharges() or 0) > 0 and (Player:InMelee(Target) or Player:IsWithinCombatDistance(Target, 8)) then
             if BrutalSlash:Cast(Player) then return end
         end
 

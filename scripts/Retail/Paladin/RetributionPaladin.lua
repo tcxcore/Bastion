@@ -233,8 +233,8 @@ RetributionModule:Sync(function()
     local isAoE = (enemyCount >= aoeThreshold)
 
     -- ==================== 打断与防暴毙 ====================
-    if RetributionModule:GetSetting("auto_interrupt") and Target:IsInterruptible() and Target:GetDistance(Player) <= 8 then
-        if Rebuke:Cast(Target) then return end
+    if RetributionModule:GetSetting("auto_interrupt") and Target:IsInterruptible() and Player:IsWithinCombatDistance(Target, 8) then
+        if Rebuke:IsKnownAndUsable() then return end
     end
 
     if hp <= RetributionModule:GetSetting("shield_hp") then
@@ -278,9 +278,10 @@ RetributionModule:Sync(function()
 
     -- 封装：常规倾泄 (最终审判 / 神圣风暴)
     local function DumpHolyPower()
-        if isAoE and Target:GetDistance(Player) <= 8 then
+        -- 根据敌人数量自动选择 神圣风暴 (AOE) 或 圣殿骑士的裁决/最终审判 (单体)
+        if isAoE and Player:IsWithinCombatDistance(Target, 8) then
             if DivineStorm:Cast(Player) then return true end
-        elseif Target:GetDistance(Player) <= 12 then
+        elseif Player:IsWithinCombatDistance(Target, 12) then
             if FinalVerdict:Cast(Target) then return true end
         end
         return false
@@ -301,7 +302,8 @@ RetributionModule:Sync(function()
     end
 
     -- 【优先级 3】：白嫖 BUFF 消耗 (至高天之力 / 神圣意志)
-    if HasEmpyreanPower() and Target:GetDistance(Player) <= 8 then
+    -- (即使星不够，只要有Buff就要用，避免被新的覆盖)
+    if HasEmpyreanPower() and Player:IsWithinCombatDistance(Target, 8) then
         if DivineStorm:Cast(Player) then return end
     end
 
