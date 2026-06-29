@@ -550,38 +550,30 @@ end
 function Spell:GetChargesFractional()
     if C_Spell.GetSpellCharges then
         local info = C_Spell.GetSpellCharges(self:GetID())
+        if not info then return 0 end
 
         if info.currentCharges == info.maxCharges then
             return info.maxCharges
         end
 
-        if info.currentCharges == 0 then
-            return 0
-        end
-
         local timeSinceStart = GetTime() - info.cooldownStartTime
-        local timeLeft = info.cooldownDuration - timeSinceStart
-        local timePerCharge = info.cooldownDuration / info.maxCharges
-        local chargesFractional = info.currentCharges + (timeLeft / timePerCharge)
+        timeSinceStart = math.max(0, math.min(info.cooldownDuration, timeSinceStart))
+        local progress = timeSinceStart / info.cooldownDuration
 
-        return chargesFractional
+        return info.currentCharges + progress
     end
     local charges, maxCharges, start, duration = GetSpellCharges(self:GetID())
+    if not charges then return 0 end
 
     if charges == maxCharges then
         return maxCharges
     end
 
-    if charges == 0 then
-        return 0
-    end
-
     local timeSinceStart = GetTime() - start
-    local timeLeft = duration - timeSinceStart
-    local timePerCharge = duration / maxCharges
-    local chargesFractional = charges + (timeLeft / timePerCharge)
+    timeSinceStart = math.max(0, math.min(duration, timeSinceStart))
+    local progress = timeSinceStart / duration
 
-    return chargesFractional
+    return charges + progress
 end
 
 -- Get the spells charges remaining
