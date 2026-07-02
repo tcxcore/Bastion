@@ -305,6 +305,19 @@ local function GetFreezingStacks()
     return 0
 end
 
+--- 检查是否是训练木桩
+---@param unit Unit
+---@return boolean
+local function IsDummy(unit)
+    if not unit or not unit:IsValid() then return false end
+    local name = unit:GetName()
+    if not name then return false end
+    if string.find(name, "木桩") or string.find(name, "Dummy") or string.find(name, "dummy") then
+        return true
+    end
+    return false
+end
+
 --- 检查目标附近敌人数量 (以目标为中心, AOE 落点判断)
 --- 使用 EnumUnits (遍历所有敌方单位) 而非 EnumEnemies (仅遍历 activeEnemies)
 --- activeEnemies 需要 InCombatOdds>80, 可能漏掉大量怪物
@@ -393,6 +406,11 @@ M:Sync(function()
     local useAOE = M:GetSetting("useAOE")
     local enemyCount = GetEnemyCount(10)
 
+    -- 如果目标是训练木桩，且开启了AOE设置，则强制将敌人数量设为AOE触发阈值
+    if useAOE and IsDummy(Target) then
+        enemyCount = math.max(enemyCount, M:GetSetting("aoeTargets"))
+    end
+
     -- 冰冷血脉 (主爆发)
     if useCDs and IcyVeins:IsKnownAndUsable() then
         if IcyVeins:Cast(Player) then return end
@@ -415,15 +433,45 @@ M:Sync(function()
     -- ==================================================================
     -- 核心输出循环
     -- ==================================================================
+    -- [优先级1] 寒冰宝珠 - CD好了就放
+    -- 寒冰宝珠滚过去会持续触发冰手指和碎裂
+    if FrozenOrb:IsKnownAndUsable() and FrozenOrb:IsInRange(Target) then
+        if FrozenOrb:Cast(Target) then return end
+    end
+    -- ==================================================================
+    -- AOE 循环 (多目标 >= N 个敌人时, 提前到单体填充之前)
+    -- ==================================================================
+    if useAOE and enemyCount >= M:GetSetting("aoeTargets") then
+        -- 暴风雪 (大面积AOE, 多目标时优先级最高)
+        -- 针对地面选点法术，使用 Player:IsWithinCombatDistance 限制范围，并用 Cast(nil) 绕过框架内置的 IsInRange 校验
+        if not Player:IsMoving() and Blizzard:IsKnownAndUsable() and Player:IsWithinCombatDistance(Target, 40) then
+            if Blizzard:Cast(nil) then
+                -- 暴风雪是AOE落点技能，需要点击地面
+                Blizzard:Click(Target:GetPosition())
+                return
+            end
+        end
 
-    -- [优先级1] 冰川尖刺 - 必须拥有大冰刺高亮Buff(5层冰锥)时才释放
+        -- 冰锥术 (近战范围AOE)
+        if ConeOfCold:IsKnownAndUsable() and Player:InMelee(Target) then
+            if ConeOfCold:Cast(Target) then return end
+        end
+
+        -- 超级新星 (AOE/打断补足)
+        if M:GetSetting("useSupernova") and Supernova:IsKnownAndUsable() and Supernova:IsInRange(Target) then
+            if Supernova:Cast(Target) then return end
+        end
+    end
+
+
+    -- [优先级2] 冰川尖刺 - 必须拥有大冰刺高亮Buff(5层冰锥)时才释放
     if GetIciclesCount() >= 5 then
         if not Player:IsMoving() and GlacialSpike:IsKnownAndUsable() and GlacialSpike:IsInRange(Target) then
             if GlacialSpike:Cast(Target) then return end
         end
     end
 
-    -- [优先级2] 碎裂(Flurry) - 有急冻大脑时消耗
+    -- [优先级3] 碎裂(Flurry) - 有急冻大脑时消耗
     -- 碎裂是最高伤害来源(40%)，急冻大脑BUFF必须尽快消耗
     -- (注意：在当前版本中不再施加深冬之寒，而是叠加冻结层数)
     if HasBrainFreeze() and Flurry:IsKnownAndUsable() then
@@ -432,13 +480,13 @@ M:Sync(function()
         end
     end
 
-    -- [优先级3] 冰霜射线 - 卡CD引导
+    -- [优先级4] 冰霜射线 - 卡CD引导
     -- 法术降生流派的核心输出技能，由于会提供可观的裂片和伤害，优先级极高
     if not Player:IsMoving() and RayOfFrost:IsKnownAndUsable() and RayOfFrost:IsInRange(Target) then
         if RayOfFrost:Cast(Target) then return end
     end
 
-    -- [优先级4] 冰枪术 - 核心输出条件
+    -- [优先级5] 冰枪术 - 核心输出条件
     -- 触发条件: 玩家有冰手指 / 目标有5层及以上冻结(1221389)
     if GetFingersOfFrostStacks() > 0 or GetFreezingStacks() >= 5 then
         if IceLance:IsKnownAndUsable() and IceLance:IsInRange(Target) then
@@ -446,11 +494,6 @@ M:Sync(function()
         end
     end
 
-    -- [优先级5] 寒冰宝珠 - CD好了就放
-    -- 寒冰宝珠滚过去会持续触发冰手指和碎裂
-    if FrozenOrb:IsKnownAndUsable() and FrozenOrb:IsInRange(Target) then
-        if FrozenOrb:Cast(Target) then return end
-    end
 
     -- [优先级6] 冰风暴 - CD好了就放 (单体和AOE都用)
     -- 冰风暴是高伤害天赋技能，单体也有不错收益
@@ -471,29 +514,6 @@ M:Sync(function()
         end
     end
 
-    -- ==================================================================
-    -- AOE 循环 (多目标 >= N 个敌人时, 提前到单体填充之前)
-    -- ==================================================================
-    if useAOE and enemyCount >= M:GetSetting("aoeTargets") then
-        -- 暴风雪 (大面积AOE, 多目标时优先级最高)
-        if not Player:IsMoving() and Blizzard:IsKnownAndUsable() then
-            if Blizzard:Cast(Target) then
-                -- 暴风雪是AOE落点技能，需要点击地面
-                Blizzard:Click(Target:GetPosition())
-                return
-            end
-        end
-
-        -- 冰锥术 (近战范围AOE)
-        if ConeOfCold:IsKnownAndUsable() and Player:InMelee(Target) then
-            if ConeOfCold:Cast(Target) then return end
-        end
-
-        -- 超级新星 (AOE/打断补足)
-        if M:GetSetting("useSupernova") and Supernova:IsKnownAndUsable() and Supernova:IsInRange(Target) then
-            if Supernova:Cast(Target) then return end
-        end
-    end
 
     -- ==================================================================
     -- 移动填充
