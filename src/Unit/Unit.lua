@@ -277,7 +277,27 @@ function Unit:GetOMToken()
         return self.unit
     end
     -- lightuserdata 指针通过 ObjectToken 转换为原生 token
-    return TCX.ObjectToken(self.unit)
+    -- [PTR 12.1 修复] 优先利用绝对可靠的 GUID 进行核心 Token 纠正，防止 ObjectToken 因暴雪机制优先返回 C++ 无法解析的 "nameplate1" 等 Token
+    local guid = TCX.ObjectGUID(self.unit)
+    if guid then
+        if guid == TCX.ObjectGUID("target") then
+            return "target"
+        elseif guid == TCX.ObjectGUID("player") then
+            return "player"
+        elseif guid == TCX.ObjectGUID("focus") then
+            return "focus"
+        elseif guid == TCX.ObjectGUID("mouseover") then
+            return "mouseover"
+        end
+    end
+
+    -- 之后再 fallback 到 C++ 层的 ObjectToken
+    local token = TCX.ObjectToken(self.unit)
+    if token then
+        return token
+    end
+
+    return nil
 end
 
 -- Get the units memory pointer
@@ -645,7 +665,15 @@ function Unit:IsTanking(unit)
         local isTanking = UnitDetailedThreatSituation("player", unit:GetOMToken())
         return isTanking
     elseif type(unit) == "table" and unit.IsUnit and unit:IsUnit("player") then
-        local isTanking = UnitDetailedThreatSituation(self:GetOMToken(), "player")
+        local isTanking = UnitDetailedThreatSituation("player", self:GetOMToken())
+        return isTanking
+    end
+    -- 如果通用匹配中有一方是玩家，确保将 'player' 作为第一个参数传入
+    if self:IsUnit("player") then
+        local isTanking = UnitDetailedThreatSituation("player", unit and unit:GetOMToken() or 'none')
+        return isTanking
+    elseif type(unit) == "table" and unit.IsUnit and unit:IsUnit("player") then
+        local isTanking = UnitDetailedThreatSituation("player", self:GetOMToken())
         return isTanking
     end
     local isTanking = UnitDetailedThreatSituation(self:GetOMToken(), unit and unit:GetOMToken() or 'none')

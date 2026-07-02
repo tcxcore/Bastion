@@ -90,8 +90,10 @@ function ObjectManager:Refresh()
                 unit = Bastion.Unit:New(object)
                 Bastion.UnitManager:SetObject(unit)
             else
-                -- 更新指针：每帧 Objects() 返回的指针可能变化
-                unit.unit = object
+                -- 更新指针：每帧 Objects() 返回的指针可能变化，但若原先是固定 Token 字符串则不覆盖
+                if type(unit.unit) ~= "string" then
+                    unit.unit = object
+                end
             end
 
             if not unit:GetOMToken() then

@@ -108,7 +108,10 @@ end
 ---@param unit Unit
 ---@return nil
 function UnitManager:SetObject(unit)
-    self.objects[unit:GetGUID()] = unit
+    local guid = unit:GetGUID()
+    if guid then
+        self.objects[guid] = unit
+    end
 end
 
 -- Create a custom unit and cache it for .5 seconds
