@@ -29,6 +29,10 @@ elseif string.match(buildVersion, "^12%.1%.") then
     Bastion.Build = "PTR"
     TCX.classic = false
     TCX.era = false
+elseif string.match(buildVersion, "^5%.5%.4") then
+    Bastion.Build = "Mop"
+    TCX.classic = false
+    TCX.era = false
 else
     Bastion.Build = "Unknown"
     TCX.classic = false

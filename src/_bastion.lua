@@ -471,6 +471,20 @@ function Bastion.Bootstrap()
                     ["WARLOCK"]     = "Warlock",
                     ["DRUID"]       = "Druid"
                 }
+            elseif Bastion.Build == "Mop" then
+                classFolderMap = {
+                    ["WARRIOR"]     = "Warrior",
+                    ["PALADIN"]     = "Paladin",
+                    ["HUNTER"]      = "Hunter",
+                    ["ROGUE"]       = "Rogue",
+                    ["PRIEST"]      = "Priest",
+                    ["DEATHKNIGHT"] = "DeathKnight",
+                    ["SHAMAN"]      = "Shaman",
+                    ["MAGE"]        = "Mage",
+                    ["WARLOCK"]     = "Warlock",
+                    ["MONK"]        = "Monk",
+                    ["DRUID"]       = "Druid"
+                }
             else
                 classFolderMap = {
                     ["WARRIOR"]     = "Warrior",
