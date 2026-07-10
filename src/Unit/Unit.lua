@@ -276,21 +276,6 @@ function Unit:GetOMToken()
     if type(self.unit) == "string" then
         return self.unit
     end
-    -- lightuserdata 指针通过 ObjectToken 转换为原生 token
-    -- [PTR 12.1 修复] 优先利用绝对可靠的 GUID 进行核心 Token 纠正，防止 ObjectToken 因暴雪机制优先返回 C++ 无法解析的 "nameplate1" 等 Token
-    local guid = TCX.ObjectGUID(self.unit)
-    if guid then
-        if guid == TCX.ObjectGUID("target") then
-            return "target"
-        elseif guid == TCX.ObjectGUID("player") then
-            return "player"
-        elseif guid == TCX.ObjectGUID("focus") then
-            return "focus"
-        elseif guid == TCX.ObjectGUID("mouseover") then
-            return "mouseover"
-        end
-    end
-
     -- 之后再 fallback 到 C++ 层的 ObjectToken
     local token = TCX.ObjectToken(self.unit)
     if token then

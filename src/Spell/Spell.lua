@@ -234,14 +234,24 @@ function Spell:Cast(unit, condition)
         return false
     end
 
-    if unit and unit:IsValid() then
-        local player = Bastion.UnitManager:Get("player")
-        if not self:IsInRange(unit) then
-            return false
-        end
-        -- 自己对自己施法不需要判定视野
-        if not player:IsUnit(unit) and not player:CanSee(unit) then
-            return false
+    if type(unit) == "string" then
+        -- Skip range and LOS checks when a raw string token (like "player") is directly passed
+    elseif unit then
+        local innerUnit = (type(unit) == "table" and rawget(unit, "value")) or unit
+        local isPlayer = type(innerUnit) == "table" and innerUnit.unit == "player"
+
+        if unit:IsValid() then
+            if not self:IsInRange(unit) then
+                return false
+            end
+            
+            -- 自己对自己施法不需要判定视野
+            if not isPlayer then
+                local player = Bastion.UnitManager:Get("player")
+                if not player:IsUnit(unit) and not player:CanSee(unit) then
+                    return false
+                end
+            end
         end
     end
 
@@ -255,7 +265,17 @@ function Spell:Cast(unit, condition)
     self.mLeftButton = IsMouseButtonDown("LeftButton")
 
     -- 施放法术（默认使用名字施放，个别无法用名字的法术在脚本层用 ID 单独处理）
-    local token = unit and unit:IsValid() and type(unit.GetOMToken) == "function" and unit:GetOMToken() or nil
+    local token = nil
+    if type(unit) == "string" then
+        token = unit
+    else
+        local innerUnit = (type(unit) == "table" and rawget(unit, "value")) or unit
+        if type(innerUnit) == "table" and type(innerUnit.unit) == "string" then
+            token = innerUnit.unit
+        else
+            token = unit and unit:IsValid() and type(unit.GetOMToken) == "function" and unit:GetOMToken() or nil
+        end
+    end
     TCX.Unlock("CastSpellByName", self:GetName(), token)
     TCX.Unlock("SpellCancelQueuedSpell")
 
@@ -287,7 +307,17 @@ function Spell:ForceCast(unit)
     self.mLeftButton = IsMouseButtonDown("LeftButton")
 
     -- 施放法术（默认使用名字施放，个别无法用名字的法术在脚本层用 ID 单独处理）
-    local token = unit and unit:IsValid() and type(unit.GetOMToken) == "function" and unit:GetOMToken() or nil
+    local token = nil
+    if type(unit) == "string" then
+        token = unit
+    else
+        local innerUnit = (type(unit) == "table" and rawget(unit, "value")) or unit
+        if type(innerUnit) == "table" and type(innerUnit.unit) == "string" then
+            token = innerUnit.unit
+        else
+            token = unit and unit:IsValid() and type(unit.GetOMToken) == "function" and unit:GetOMToken() or nil
+        end
+    end
     TCX.Unlock("CastSpellByName", self:GetName(), token)
     TCX.Unlock("SpellCancelQueuedSpell")
 
