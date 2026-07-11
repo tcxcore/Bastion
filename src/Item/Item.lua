@@ -1,5 +1,5 @@
-local _, Bastion = ...
-local TCX = Bastion.TCX
+local tcx, Bastion = ...
+local TCX = tcx
 
 -- Create a new Item class
 ---@class Item
@@ -285,9 +285,9 @@ function Item:Click(x, y, z)
         TCX.ClickPosition(x, y, z)
         -- 基于当前时刻的真实鼠标状态恢复锁定
         if rightNow then
-            TCX.Unlock("TurnOrActionStart")
+            TurnOrActionStart()
         elseif leftNow then
-            TCX.Unlock("CameraOrSelectOrMoveStart")
+            CameraOrSelectOrMoveStart()
         end
         return true
     end

@@ -1,8 +1,8 @@
 -- Bastion 配置管理器
 -- 使用 TCX 文件系统 + JSON 编解码实现配置持久化
 
-local _, Bastion = ...
-local TCX = Bastion.TCX
+local tcx, Bastion = ...
+local TCX = tcx
 
 ---@class ConfigManager
 local ConfigManager = {}

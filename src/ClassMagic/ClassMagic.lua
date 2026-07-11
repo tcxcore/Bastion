@@ -1,3 +1,6 @@
+local tcx, Bastion = ...
+local TCX = tcx
+
 ---@class ClassMagic
 local ClassMagic = {}
 ClassMagic.__index = ClassMagic

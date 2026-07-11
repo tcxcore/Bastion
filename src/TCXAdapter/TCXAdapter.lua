@@ -1,14 +1,12 @@
-local _, Bastion = ...
-local TCX = Bastion.TCX
+local tcx, Bastion = ...
+local TCX = tcx
 
 -- ============================================================
 -- TCX 兼容适配层
--- 将原 Bastion 框架依赖的全局函数映射到 C_Timer.TCX.*
--- 并自动处理战斗中原生 API 返回值的 secret 加密标志
 -- ============================================================
 
 -- ----------------------------------------------------------
--- 版本识别与 Unwrap 解密逻辑重构
+-- 版本识别
 -- ----------------------------------------------------------
 local buildVersion = GetBuildInfo()
 Bastion.buildVersion = buildVersion
@@ -57,4 +55,6 @@ end
 TCX.Click = function(x, y, z)
     return TCX.ClickPosition(x, y, z)
 end
+
+
 

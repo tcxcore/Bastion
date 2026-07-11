@@ -1,5 +1,5 @@
-local _, Bastion = ...
-local TCX = Bastion.TCX
+local tcx, Bastion = ...
+local TCX = tcx
 
 ---@class Library
 ---@field name string

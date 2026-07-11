@@ -1,3 +1,6 @@
+local tcx, Bastion = ...
+local TCX = tcx
+
 -- Create an EventManager class
 ---@class EventManager
 local EventManager = {
@@ -58,7 +61,7 @@ function EventManager:RegisterWoWEvent(event, handler)
             end
             _G.BastionSecureEventFrame:RegisterEvent("%s")
         ]], event)
-        C_Timer.TCX.RunScript(scriptStr)
+        TCX.RunScript(scriptStr)
     end
 
     table.insert(self.wowEventHandlers[event], handler)

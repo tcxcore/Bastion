@@ -1,4 +1,4 @@
-local _, Bastion = ...
+local tcx, Bastion = ...
 local L = Bastion.Locale
 
 -- ======================================================================
@@ -234,8 +234,8 @@ end
 -- 5.5. 火焰吐息专用施放 (该法术无法通过 CastSpellByName 释放，需使用 CastSpellByID)
 local function CastFireBreath(unit)
     if not FireBreath:IsKnownAndUsable() then return false end
-    Bastion.TCX.Unlock("CastSpellByID", FireBreath:GetID(), unit:GetOMToken())
-    Bastion.TCX.Unlock("SpellCancelQueuedSpell")
+    CastSpellByID(FireBreath:GetID(), unit:GetOMToken())
+    SpellCancelQueuedSpell()
     return true
 end
 
@@ -244,8 +244,8 @@ local function CastBreathOfEons(unit)
     -- 简单 CD 检查
     local info = C_Spell.GetSpellCooldown(BreathOfEons:GetID())
     if info and info.duration > 0 then return false end
-    Bastion.TCX.Unlock("CastSpellByName", "亘古吐息", unit:GetOMToken())
-    Bastion.TCX.Unlock("SpellCancelQueuedSpell")
+    CastSpellByName("亘古吐息", unit:GetOMToken())
+    SpellCancelQueuedSpell()
     return true
 end
 

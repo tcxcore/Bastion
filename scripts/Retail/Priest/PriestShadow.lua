@@ -1,4 +1,4 @@
-local _, Bastion = ...
+local tcx, Bastion = ...
 local L = Bastion.Locale
 
 local Player = Bastion.UnitManager:Get('player')
@@ -304,7 +304,7 @@ M:Sync(function()
                 -- local hasVoidform = Player:GetAuras():FindMy(VoidformBuff)
                 -- 如果在虚空形态（瞬发齐射）可以移动施法；如果是基础爆发（读条）则需站定
                 if not isMoving then
-                    C_Timer.TCX.Unlock("CastSpellByID", 228260, Target:GetOMToken())
+                    CastSpellByID(228260, Target:GetOMToken())
                     -- VoidformActive.lastCastAttempt = GetTime()
                     --return
                 end

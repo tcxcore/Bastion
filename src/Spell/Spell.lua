@@ -1,23 +1,23 @@
-local _, Bastion = ...
-local TCX = Bastion.TCX
+local tcx, Bastion = ...
+local TCX = tcx
 local C_Spell = setmetatable({}, { __index = _G.C_Spell })
 if _G.C_Spell then
     C_Spell.GetSpellCooldown = function(spellId)
-        return TCX.Unlock("C_Spell.GetSpellCooldown", spellId)
+        return _G.C_Spell.GetSpellCooldown(spellId)
     end
     C_Spell.GetSpellCharges = function(spellId)
-        return TCX.Unlock("C_Spell.GetSpellCharges", spellId)
+        return _G.C_Spell.GetSpellCharges(spellId)
     end
 end
 
 local function GetSpellCooldown(spellId)
     if not _G.GetSpellCooldown then return end
-    return TCX.Unlock("GetSpellCooldown", spellId)
+    return _G.GetSpellCooldown(spellId)
 end
 
 local function GetSpellCharges(spellId)
     if not _G.GetSpellCharges then return end
-    return TCX.Unlock("GetSpellCharges", spellId)
+    return _G.GetSpellCharges(spellId)
 end
 
 -- Create a new Spell class
@@ -222,6 +222,17 @@ end
 ---@param condition? string|function
 ---@return boolean
 function Spell:Cast(unit, condition)
+    -- 黄金防切换开关技能保护 (针对自动射击 75、自动攻击 6603、丢魔杖 5019 等)
+    local spellId = self:GetID()
+    local spellName = self:GetName()
+    if spellId == 75 or spellId == 6603 or spellId == 5019 or
+       spellName == "自动攻击" or spellName == "自动射击" or
+       spellName == "Auto Attack" or spellName == "Auto Shot" then
+        if self:IsCurrent() then
+            return true -- 已经在射击/攻击中，直接返回 true，防止重复施放造成关闭
+        end
+    end
+
     if condition then
         if type(condition) == "string" and not self:EvaluateCondition(condition) then
             return false
@@ -276,8 +287,8 @@ function Spell:Cast(unit, condition)
             token = unit and unit:IsValid() and type(unit.GetOMToken) == "function" and unit:GetOMToken() or nil
         end
     end
-    TCX.Unlock("CastSpellByName", self:GetName(), token)
-    TCX.Unlock("SpellCancelQueuedSpell")
+    CastSpellByName(self:GetName(), token)
+    SpellCancelQueuedSpell()
 
     Bastion:Debug("Casting", self)
 
@@ -297,6 +308,17 @@ end
 ---@param condition string
 ---@return boolean
 function Spell:ForceCast(unit)
+    -- 黄金防切换开关技能保护 (针对自动射击 75、自动攻击 6603、丢魔杖 5019 等)
+    local spellId = self:GetID()
+    local spellName = self:GetName()
+    if spellId == 75 or spellId == 6603 or spellId == 5019 or
+       spellName == "自动攻击" or spellName == "自动射击" or
+       spellName == "Auto Attack" or spellName == "Auto Shot" then
+        if self:IsCurrent() then
+            return true -- 已经在射击/攻击中，直接返回 true，防止重复施放造成关闭
+        end
+    end
+
     -- Call pre cast function
     -- if self:GetPreCastFunction() then
     --     self:GetPreCastFunction()(self)
@@ -318,8 +340,8 @@ function Spell:ForceCast(unit)
             token = unit and unit:IsValid() and type(unit.GetOMToken) == "function" and unit:GetOMToken() or nil
         end
     end
-    TCX.Unlock("CastSpellByName", self:GetName(), token)
-    TCX.Unlock("SpellCancelQueuedSpell")
+    CastSpellByName(self:GetName(), token)
+    SpellCancelQueuedSpell()
 
     Bastion:Debug("Casting", self)
 
@@ -365,17 +387,19 @@ end
 function Spell:IsCurrent()
     -- 1. 标准当前施法状态检测 (针对近战自动攻击等)
     local isCurrent = false
-    if C_Spell.IsCurrentSpell then
-        isCurrent = TCX.Unlock("C_Spell.IsCurrentSpell", self:GetID())
+    if _G.C_Spell and _G.C_Spell.IsCurrentSpell then
+        isCurrent = _G.C_Spell.IsCurrentSpell(self:GetID())
+    elseif IsCurrentSpell then
+        isCurrent = IsCurrentSpell(self:GetID()) or IsCurrentSpell(self:GetName())
     end
     if isCurrent then return true end
 
     -- 2. 针对远程开关型自动循环物理法术 (如猎人自动射击 75, 丢魔杖等) 进行智能加固检测
     local isAutoRepeat = false
-    if C_Spell.IsAutoRepeatSpell then
-        isAutoRepeat = TCX.Unlock("C_Spell.IsAutoRepeatSpell", self:GetID())
+    if _G.C_Spell and _G.C_Spell.IsAutoRepeatSpell then
+        isAutoRepeat = _G.C_Spell.IsAutoRepeatSpell(self:GetID())
     elseif IsAutoRepeatSpell then
-        isAutoRepeat = TCX.Unlock("IsAutoRepeatSpell", self:GetID())
+        isAutoRepeat = IsAutoRepeatSpell(self:GetID()) or IsAutoRepeatSpell(self:GetName())
     end
 
     return isAutoRepeat or false
@@ -452,9 +476,9 @@ function Spell:Click(x, y, z)
         TCX.ClickPosition(x, y, z)
         -- 基于当前时刻的真实鼠标状态恢复锁定
         if rightNow then
-            TCX.Unlock("TurnOrActionStart")
+            TurnOrActionStart()
         elseif leftNow then
-            TCX.Unlock("CameraOrSelectOrMoveStart")
+            CameraOrSelectOrMoveStart()
         end
         return true
     end

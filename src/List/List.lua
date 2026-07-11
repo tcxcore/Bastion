@@ -1,3 +1,6 @@
+local tcx, Bastion = ...
+local TCX = tcx
+
 ---@class List
 local List = {
     -- Add overload

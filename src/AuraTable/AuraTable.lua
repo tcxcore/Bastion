@@ -1,12 +1,12 @@
-local _, Bastion = ...
-local TCX = Bastion.TCX
+local tcx, Bastion = ...
+local TCX = tcx
 local C_UnitAuras = setmetatable({}, { __index = _G.C_UnitAuras })
 if _G.C_UnitAuras then
     C_UnitAuras.GetAuraDataByAuraInstanceID = function(unit, id)
-        return TCX.Unlock("C_UnitAuras.GetAuraDataByAuraInstanceID", unit, id)
+        return _G.C_UnitAuras.GetAuraDataByAuraInstanceID(unit, id)
     end
     C_UnitAuras.GetAuraDataByIndex = function(unit, index, filter)
-        return TCX.Unlock("C_UnitAuras.GetAuraDataByIndex", unit, index, filter)
+        return _G.C_UnitAuras.GetAuraDataByIndex(unit, index, filter)
     end
 end
 
@@ -35,8 +35,7 @@ end
 ---@param auras UnitAuraUpdateInfo
 ---@return nil
 function AuraTable:OnUpdate(auras)
-    -- 由于原有的 UNIT_AURA 参数带 secret values 且我们移除了 Unwrap，
-    -- 这里忽略增量参数，直接对光环进行全量更新。全量更新内部调用的是已 Unlock 的 AuraUtil_ForEachAura。
+    -- 这里忽略增量参数，直接对光环进行全量更新。
     self:Update()
 end
 
@@ -189,7 +188,7 @@ end
 function AuraTable:Update()
     -- print("Updating auras for " .. tostring(self.unit))
     self:Clear()
-    -- self.lastUpdate = GetTime()
+    self.lastUpdate = GetTime()
 
     self:GetUnitBuffs()
     self:GetUnitDebuffs()
@@ -212,13 +211,12 @@ function AuraTable:GetUnitAuras()
         return self.auras
     end
 
-    -- -- Cache the auras for the unit so we don't have to query the API every time we want to check if the unit has a specific aura or not
-    -- -- If it's less than .4  seconds since the last time we queried the API, return the cached auras
-    -- if self.lastUpdate and GetTime() - self.lastUpdate < 0.5 then
-    --     return self.auras
-    -- end
+    -- 限制 0.3 秒的缓存拦截以优化高频性能，同时提供高精度刷新
+    if self.lastUpdate and GetTime() - self.lastUpdate < 0.3 then
+        return self.auras
+    end
 
-    -- self:Update()
+    self:Update()
     return self.auras
 end
 
@@ -236,13 +234,12 @@ function AuraTable:GetMyUnitAuras()
         return self.playerAuras
     end
 
-    -- -- Cache the auras for the unit so we don't have to query the API every time we want to check if the unit has a specific aura or not
-    -- -- If it's less than .4  seconds since the last time we queried the API, return the cached auras
-    -- if self.lastUpdate and GetTime() - self.lastUpdate < 0.5 then
-    --     return self.playerAuras
-    -- end
+    -- 限制 0.3 秒的缓存拦截以优化高频性能，同时提供高精度刷新
+    if self.lastUpdate and GetTime() - self.lastUpdate < 0.3 then
+        return self.playerAuras
+    end
 
-    -- self:Update()
+    self:Update()
     return self.playerAuras
 end
 

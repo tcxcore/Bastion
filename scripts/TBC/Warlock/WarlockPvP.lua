@@ -1,4 +1,4 @@
-local _, Bastion = ...
+local tcx, Bastion = ...
 local L = Bastion.Locale
 
 local Player = Bastion.UnitManager:Get('player')
@@ -33,7 +33,7 @@ local function OrderPetAttack(unit)
     -- 严格检查类型：防止底层返回了空值(nil)或未经翻译的指针，直接塞给 PetAttack 导致 C++ 崩溃
     if type(token) == "string" then
         print(">> 发送命令：宠物攻击 -> " .. (unit:GetName() or "未知目标") .. " [Token: " .. token .. "]")
-        Unlock("PetAttack", token)
+        PetAttack(token)
     end
 end
 

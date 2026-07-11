@@ -1,3 +1,6 @@
+local tcx, Bastion = ...
+local TCX = tcx
+
 -- Create a wow command handler class
 ---@class Command
 ---@field command string

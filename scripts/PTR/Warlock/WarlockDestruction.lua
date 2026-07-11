@@ -1,7 +1,7 @@
 --- 毁灭术 (Destruction)
 --- 核心流派：恶魔使徒 (Diabolist)
 
-local _, Bastion = ...
+local tcx, Bastion = ...
 local L = Bastion.Locale
 
 local Player = Bastion.UnitManager:Get('player')

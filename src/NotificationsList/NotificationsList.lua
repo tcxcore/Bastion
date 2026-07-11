@@ -1,3 +1,6 @@
+local tcx, Bastion = ...
+local TCX = tcx
+
 -- Create a NotificationsList class
 
 ---@class NotificationsList
@@ -32,8 +35,7 @@ end
 
 -- Create a notification class for the notifications list (takes icon and text)
 ---@class Notification
-local Notification = {
-}
+local Notification = {}
 Notification.__index = Notification
 
 -- Constructor

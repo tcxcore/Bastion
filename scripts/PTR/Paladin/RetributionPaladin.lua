@@ -1,4 +1,4 @@
-local _, Bastion = ...
+local tcx, Bastion = ...
 
 local _, englishClass = UnitClass("player")
 if englishClass ~= "PALADIN" then return end
@@ -176,8 +176,8 @@ function Judgment:Cast(unit, condition)
     self.wasLooking = IsMouselooking()
     
     -- 核心修复：强制使用 ID 施放 20271
-    Bastion.TCX.Unlock("CastSpellByID", 20271, unit:GetOMToken())
-    Bastion.TCX.Unlock("SpellCancelQueuedSpell")
+    CastSpellByID(20271, unit:GetOMToken())
+    SpellCancelQueuedSpell()
     
     self.lastCastAttempt = GetTime()
 
@@ -290,8 +290,8 @@ RetributionModule:Sync(function()
     -- 【优先级 1】：圣光之锤 (耗 5 豆，绝杀伤害。哪怕有免费BUFF也先砸锤子，防止窗口期结束)
     -- 和审判一样的原理：因为是变异技能，CastSpellByName("圣光之锤") 会被拒收！必须直接用原始 ID 强砸！
     if holyPower == 5 and isHoLWindow and WakeOfAshes:IsInRange(Target) then
-        Bastion.TCX.Unlock("CastSpellByID", 255937, Target:GetOMToken())
-        Bastion.TCX.Unlock("SpellCancelQueuedSpell")
+        CastSpellByID(255937, Target:GetOMToken())
+        SpellCancelQueuedSpell()
         WakeOfAshes.lastCastAttempt = GetTime()
         return
     end

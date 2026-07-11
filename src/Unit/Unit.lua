@@ -1,18 +1,18 @@
-local _, Bastion = ...
-local TCX = Bastion.TCX
+local tcx, Bastion = ...
+local TCX = tcx
 local function UnitCastingInfo(unit)
     if not _G.UnitCastingInfo then return end
-    return TCX.Unlock("UnitCastingInfo", unit)
+    return _G.UnitCastingInfo(unit)
 end
 
 local function UnitChannelInfo(unit)
     if not _G.UnitChannelInfo then return end
-    return TCX.Unlock("UnitChannelInfo", unit)
+    return _G.UnitChannelInfo(unit)
 end
 
 local function GetSpellCooldown(spellId)
     if not _G.GetSpellCooldown then return end
-    return TCX.Unlock("GetSpellCooldown", spellId)
+    return _G.GetSpellCooldown(spellId)
 end
 
 -- Create a new Unit class
@@ -163,21 +163,21 @@ end
 -- Get the units power type
 ---@return number
 function Unit:GetPowerType()
-    return TCX.Unlock("UnitPowerType", self:GetOMToken())
+    return _G.UnitPowerType(self:GetOMToken())
 end
 
 -- Get the units power
 ---@param powerType number | nil
 ---@return number
 function Unit:GetPower(powerType)
-    return TCX.Unlock("UnitPower", self:GetOMToken(), powerType)
+    return _G.UnitPower(self:GetOMToken(), powerType)
 end
 
 -- Get the units max power
 ---@param powerType number | nil
 ---@return number
 function Unit:GetMaxPower(powerType)
-    return TCX.Unlock("UnitPowerMax", self:GetOMToken(), powerType)
+    return _G.UnitPowerMax(self:GetOMToken(), powerType)
 end
 
 -- Get the units power percentage
@@ -1184,8 +1184,7 @@ function Unit:GetEmpoweredStage()
         local currentTime = GetTime()
         local stageDuration = 0
         for i = 1, numStages do
-            -- GetUnitEmpowerStageDuration 返回的是加密对象，使用 Unlock
-            stageDuration = stageDuration + TCX.Unlock("GetUnitEmpowerStageDuration", self:GetOMToken(), i - 1) / 1000
+            stageDuration = stageDuration + GetUnitEmpowerStageDuration(self:GetOMToken(), i - 1) / 1000
             if start + stageDuration > currentTime then
                 break
             end

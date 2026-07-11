@@ -1,16 +1,17 @@
 -- Document with emmy lua: https://emmylua.github.io/
-local TCX, Bastion = ...
+local tcx, Bastion = ...
+local TCX = tcx
 local C_UnitAuras = setmetatable({}, { __index = _G.C_UnitAuras })
 if _G.C_UnitAuras then
     C_UnitAuras.GetAuraDataByIndex = function(unit, index, filter)
-        return Bastion.TCX.Unlock("C_UnitAuras.GetAuraDataByIndex", unit, index, filter)
+        return _G.C_UnitAuras.GetAuraDataByIndex(unit, index, filter)
     end
 end
 
 local function AuraUtil_ForEachAura(unit, filter, maxCount, func, ...)
     if not _G.AuraUtil then return end
     if not _G.AuraUtil.ForEachAura then return end
-    Bastion.TCX.Unlock("AuraUtil.ForEachAura", unit, filter, maxCount, func, ...)
+    _G.AuraUtil.ForEachAura(unit, filter, maxCount, func, ...)
 end
 
 -- Create a new Aura class

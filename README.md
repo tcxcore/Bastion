@@ -44,9 +44,9 @@ TCX Discord: https://discord.gg/6UGp9umUUf
 - 通过 `Unit:GetOMToken()` 获取 Token，通过 `Spell:Cast()` 施放技能
 
 ## 快速开始
-注：本框架依赖：https://www.curseforge.com/wow/addons/abstract-framework ， 请自行下载解压到魔兽世界的插件目录中
-1. 将 `Bastion` 文件夹放入 TCX-Retail或TCX.App 的 `scripts/` 目录
-2. 进入游戏TCX解锁器解锁成功后，在小地图左键点击Bastion图标打开UI界面，选择对应职业天赋的循环，右键点击Bastion图标，切换Bastion的开关
+注：本框架已完全重构并脱离对 `Abstract-Framework` 插件的任何外部依赖，支持 100% 独立原生自闭环运行。
+1. 将 `Bastion` 文件夹放入 TCX-Retail 或 TCX.App 的 `scripts/` 目录
+2. 进入游戏 TCX 解锁器解锁成功后，在小地图左键点击 Bastion 图标打开 UI 界面，选择对应职业天赋的循环，右键点击 Bastion 图标即可快速切换 Bastion 的开关。
 
 ## 已有脚本
 所有职业均已经按客户端版本 (Retail / Titan / TBC) 进行了分类拆解。如：
