@@ -1,5 +1,6 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = setmetatable({}, { __index = tcx })
+Bastion.TCX = TCX
 
 -- ============================================================
 -- TCX 兼容适配层

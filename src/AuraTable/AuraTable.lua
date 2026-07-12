@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 local C_UnitAuras = setmetatable({}, { __index = _G.C_UnitAuras })
 if _G.C_UnitAuras then
     C_UnitAuras.GetAuraDataByAuraInstanceID = function(unit, id)
