@@ -1,3 +1,4 @@
+local tcx, Bastion = ...
 -- Bastion 本地化模块
 -- 通过 WoW GetLocale() API 自动检测客户端语言，回退策略：找不到翻译则返回原始键名
 
@@ -122,4 +123,5 @@ Locale:Register("zhCN", {
     ["Hotkey updated"]                      = "快捷键已更新",
 })
 
+Bastion.Locale = Locale
 return Locale

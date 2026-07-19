@@ -1,3 +1,4 @@
+local tcx, Bastion = ...
 -- Create a sequencer class that takes a table of actions and executes them in order
 ---@class Sequencer
 ---@field resetCondition fun(): boolean
@@ -84,4 +85,5 @@ function Sequencer:__tostring()
     return "Bastion.__Sequencer"
 end
 
+Bastion.Sequencer = Sequencer
 return Sequencer

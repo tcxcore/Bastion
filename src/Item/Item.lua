@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 -- Create a new Item class
 ---@class Item
@@ -484,4 +484,5 @@ function Item:GetSpell()
     return nil
 end
 
+Bastion.Item = Item
 return Item

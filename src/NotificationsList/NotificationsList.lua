@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 -- Create a NotificationsList class
 
@@ -145,5 +145,6 @@ function NotificationsList:RemoveAllNotifications()
     end
 end
 
--- Remove all notifications
+Bastion.NotificationsList = NotificationsList
+Bastion.Notification = Notification
 return NotificationsList, Notification

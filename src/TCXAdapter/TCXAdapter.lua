@@ -2,6 +2,22 @@ local tcx, Bastion = ...
 local TCX = setmetatable({}, { __index = tcx })
 Bastion.TCX = TCX
 
+if Bastion then
+    Bastion.DebugMode = false
+end
+
+local hostFrame = GetClickFrame("BastionHostFrame")
+if not hostFrame then
+    hostFrame = CreateFrame("Button", "BastionHostFrame")
+end
+
+if hostFrame then
+    hostFrame.pendingModules = hostFrame.pendingModules or {}
+    hostFrame.RegisterModule = function(self, createFunc)
+        table.insert(self.pendingModules, createFunc)
+    end
+end
+
 -- ============================================================
 -- TCX 兼容适配层
 -- ============================================================
@@ -16,6 +32,10 @@ if string.match(buildVersion, "^3%.80%.") then
     Bastion.Build = "Titan"
     TCX.classic = true
     TCX.era = false
+elseif string.match(buildVersion, "^1%.15%.") then
+    Bastion.Build = "Classic"
+    TCX.classic = true
+    TCX.era = true
 elseif string.match(buildVersion, "^2%.5%.") then
     Bastion.Build = "TBC"
     TCX.classic = false
@@ -28,7 +48,7 @@ elseif string.match(buildVersion, "^12%.1%.") then
     Bastion.Build = "PTR"
     TCX.classic = false
     TCX.era = false
-elseif string.match(buildVersion, "^5%.5%.4") then
+elseif string.match(buildVersion, "^5%.5%.") then
     Bastion.Build = "Mop"
     TCX.classic = false
     TCX.era = false
@@ -36,6 +56,10 @@ else
     Bastion.Build = "Unknown"
     TCX.classic = false
     TCX.era = false
+end
+
+if hostFrame then
+    hostFrame.Build = Bastion.Build
 end
 
 
@@ -56,6 +80,48 @@ end
 TCX.Click = function(x, y, z)
     return TCX.ClickPosition(x, y, z)
 end
+
+-- ----------------------------------------------------------
+-- 载具坐标与朝向折算世界坐标
+-- ----------------------------------------------------------
+
+local function GetWorldRotation(obj, _depth)
+    _depth = _depth or 0
+    if _depth > 5 then return tcx.ObjectRotation(obj) end
+    local f = tcx.ObjectRotation(obj)
+    if not f then return nil end
+    local t = tcx.ObjectTransport(obj)
+    if t and t ~= obj then
+        local tr = GetWorldRotation(t, _depth + 1)
+        if tr then
+            f = (f + tr) % (2 * math.pi)
+        end
+    end
+    return f
+end
+
+local function GetWorldPosition(obj, _depth)
+    _depth = _depth or 0
+    if _depth > 5 then return tcx.ObjectPosition(obj) end
+    local x, y, z = tcx.ObjectPosition(obj)
+    if not x then return nil end
+    local t = tcx.ObjectTransport(obj)
+    if t and t ~= obj then
+        local tx, ty, tz = GetWorldPosition(t, _depth + 1)
+        local yaw = GetWorldRotation(t, _depth + 1)
+        if tx and yaw then
+            local c, s = math.cos(yaw), math.sin(yaw)
+            return tx + (x * c - y * s),
+                   ty + (x * s + y * c),
+                   tz + z
+        end
+    end
+    return x, y, z
+end
+
+-- 覆盖 Bastion.TCX 代理表中的 API
+TCX.ObjectPosition = GetWorldPosition
+TCX.ObjectRotation = GetWorldRotation
 
 
 

@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 local function UnitCastingInfo(unit)
     if not _G.UnitCastingInfo then return end
     return _G.UnitCastingInfo(unit)
@@ -97,7 +97,7 @@ end
 -- Check if the unit exists
 ---@return boolean
 function Unit:Exists()
-    return TCX.Object(self:GetOMToken())
+    return TCX.Object(self.unit) ~= nil
 end
 
 -- Get the units token
@@ -115,7 +115,11 @@ end
 -- Get the units GUID
 ---@return string
 function Unit:GetGUID()
-    return TCX.ObjectGUID(self:GetOMToken())
+    if not self.unit then return nil end
+    if type(self.unit) == "string" and string.find(self.unit, "-") then
+        return self.unit
+    end
+    return TCX.ObjectGUID(self.unit)
 end
 
 -- Get the units health
@@ -272,23 +276,24 @@ function Unit:GetOMToken()
     if not self.unit then
         return nil
     end
-    -- 字符串 token（"player", "target" 等）直接返回
-    if type(self.unit) == "string" then
+
+    -- 字符串 token（"player", "target" 等不含 "-" 字符）直接返回
+    if type(self.unit) == "string" and not string.find(self.unit, "-") then
         return self.unit
     end
-    -- 之后再 fallback 到 C++ 层的 ObjectToken
-    local token = TCX.ObjectToken(self.unit)
-    if token then
-        return token
-    end
 
-    return nil
+    -- 对象指针 (userdata) 或 格式化后的 WOW GUID 直接利用底层 ObjectToken 进行原生多态反查
+    return TCX.ObjectToken(self.unit)
 end
 
 -- Get the units memory pointer
 ---@return userdata|lightuserdata|nil
 function Unit:GetPointer()
-    return self.unit
+    if not self.unit then return nil end
+    if type(self.unit) == "userdata" then
+        return self.unit
+    end
+    return TCX.Object(self.unit)
 end
 
 
@@ -343,7 +348,7 @@ end
 -- Get if the unit is affecting combat
 ---@return boolean
 function Unit:IsAffectingCombat()
-    return UnitAffectingCombat(self:GetOMToken())
+    return TCX.ObjectIsInCombat(self.unit)
 end
 
 -- Get the units class id
@@ -1252,5 +1257,6 @@ end
 --     return higheststage
 -- end
 
+Bastion.Unit = Unit
 return Unit
 

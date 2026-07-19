@@ -2,7 +2,7 @@
 -- 使用 TCX 文件系统 + JSON 编解码实现配置持久化
 
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 ---@class ConfigManager
 local ConfigManager = {}
@@ -28,8 +28,16 @@ end
 
 --- 确保配置目录存在
 function ConfigManager:EnsureDir()
-    if not TCX.DirectoryExists(CONFIG_DIR) then
-        TCX.CreateDirectory(CONFIG_DIR)
+    local path = ""
+    for segment in string.gmatch(CONFIG_DIR, "[^/]+") do
+        if path == "" then
+            path = segment
+        else
+            path = path .. "/" .. segment
+        end
+        if not TCX.DirectoryExists(path) then
+            TCX.CreateDirectory(path)
+        end
     end
 end
 
@@ -122,4 +130,5 @@ function ConfigManager:LoadFrameworkSettings()
     return nil
 end
 
+Bastion.ConfigManager = ConfigManager
 return ConfigManager

@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 ---@class ClassMagic
 local ClassMagic = {}
@@ -53,4 +53,5 @@ function ClassMagic:Resolve(Class, key)
     return Class[key]
 end
 
+Bastion.ClassMagic = ClassMagic
 return ClassMagic

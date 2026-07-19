@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 ---@class List
 local List = {
@@ -209,4 +209,5 @@ function List:__tostring()
     return self:toString()
 end
 
+Bastion.List = List
 return List

@@ -259,6 +259,16 @@ function AuraTable:Find(spell)
     local aurasub = auras[spell:GetID()]
 
     if not aurasub then
+        local nameToFind = spell:GetName()
+        if nameToFind then
+            for id, list in pairs(auras) do
+                for _, a in pairs(list) do
+                    if a ~= nil and a:IsUp() and a:GetName() == nameToFind then
+                        return a
+                    end
+                end
+            end
+        end
         return Bastion.Aura:New()
     end
 
@@ -285,6 +295,16 @@ function AuraTable:FindMy(spell)
     local aurasub = auras[spell:GetID()]
 
     if not aurasub then
+        local nameToFind = spell:GetName()
+        if nameToFind then
+            for id, list in pairs(auras) do
+                for _, a in pairs(list) do
+                    if a ~= nil and a:IsUp() and a:GetName() == nameToFind then
+                        return a
+                    end
+                end
+            end
+        end
         return Bastion.Aura:New()
     end
 
@@ -754,4 +774,5 @@ function AuraTable:HasAnyDispelableAura(spell)
     return false
 end
 
+Bastion.AuraTable = AuraTable
 return AuraTable

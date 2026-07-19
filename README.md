@@ -26,13 +26,15 @@ TCX Discord: https://discord.gg/6UGp9umUUf
 | `_bastion.lua` | 以脱敏的 `COMBAT_LOG_EVENT_UNFILTERED` 配合 `C_Timer.TCX.GetCurrentEventInfo()` 替代 `UNIT_SPELLCAST_SUCCEEDED` 来获取未污染的 `spellID`，精确触发后摇回调。 |
 | `Vector3.lua` | `FastDistance` 替换为 `math.sqrt` 原生实现 |
 | `Item.lua` | `FastDistance` 替换为 `math.sqrt` 原生实现 |
-| `TCXAdapter/` | 新增 TCX 兼容适配层，映射 `Object/Objects/ObjectGUID` 等全局函数 |
-| `_bastion.lua` | 增加职业目录按需加载逻辑，并加入 `TCX.IsInGame()` 状态检测，支持安全登录初始化延迟 |
-| `BastionUI/` & `config/` | 新增模块化 UI 界面和基于 YAML 的 ConfigManager，支持用户在游戏内切换和保存配置 |
+| `TCXAdapter/` | 新增 TCX 兼容适配层，映射 `Object/Objects/ObjectGUID` 等全局函数，并主动自愈构建宿主通信 frame `BastionHostFrame` 以接管外部独立注册 |
+| `_bastion.lua` | 提供模块库主框架入口，接管并消费外部挂载队列，彻底打通与外部独立战斗循环脚本的异步通信注册链 |
+| `BastionUI/` & `config/` | 新增模块化 UI 界面和基于 JSON 的 ConfigManager，支持用户在游戏内切换和保存配置 |
 | `Locale/` | 增加多语言翻译文本支持模块 |
 
-### 最新更新 (v1.x)
-- **多版本客户端支持**：重构了脚本目录层级，现在支持按 `Retail`、`Titan` 和 `TBC` 客户端版本独立加载对应的战斗循环模块 (`scripts/<版本>/<职业>/`)。
+### 最新更新 (v2.0)
+- **战斗循环外部化托管与安全注册 (v2.0)**：已将原本内置在主框架下的 Retail 全职业 87 个战斗循环脚本，重构并迁移至外部独立项目 **[Bastion-CR]** 中托管。外部脚本顶层采用原生职业判定进行加载隔离阻断，尾部使用 `TryRegister` 轮询检索宿主窗体进行异步挂载，实现解耦。
+- **物理加载 BOM 签名自愈剥离 (C++ 层加固)**：在 DLL 层的全部同步/异步物理文件和内存加载入口中，并入了一键剥离 UTF-8 BOM 签名（`0xEF 0xBB 0xBF`）的检测算法。彻底消除了由于外部编辑器、重构脚本在 CRLF 文本头部引入不可见字符，导致在与 Wrapper 代码合并后在中间行爆发 `unexpected symbol near '[]'` 的报错，大大稳固了本地 TOC 解析加载链路。
+- **多版本客户端支持**：重构了脚本目录层级，现在支持按 `Retail`、`Titan` 和 `TBC` 客户端版本独立加载对应的战斗循环模块。
 - **底层内存检索优化**：全面升级了 `Unit`, `ObjectManager`, `TCXAdapter` 的底层交互，大幅提升了 `ObjectToken`、`ObjectGUID` 及交互接口在复杂战斗环境中的运行性能。
 - **配置系统 (JSON) 升级**：废弃了 `YAML` 格式，全面采用更加规范的 `JSON` 持久化方案。现在每一个战斗循环模块均会独立生成对应名称的 `.json` 配置文件，全局开关和界面热键则整合入 `framework.json`。
 - **全职业核心技能面向判定（IsFacing）加固**：为包含冰DK、冰法、恶魔术、毁灭术、噬灭DH、熊T、酒仙武僧在内的全职业核心指向性伤害/打断/嘲讽技能深度注入了 `Player:IsFacing(Target)` 面向判定拦截。确保角色必须在物理上面全对目标时才出手，彻底解决了因背对目标盲目施法导致客户端高频抛出“你必须面对目标”的红字和瞬间卡屏，而自身增益减伤与 360 度群拉技能（如痛击、神鹤）则获得完全豁免。

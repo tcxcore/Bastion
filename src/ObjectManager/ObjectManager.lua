@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 ---@class ObjectManager
 ---@field _lists table
@@ -113,6 +113,7 @@ function ObjectManager:Refresh()
     end
 end
 
+Bastion.ObjectManager = ObjectManager
 return ObjectManager
 
 

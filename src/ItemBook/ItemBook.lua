@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 -- Create a new ItemBook class
 ---@class ItemBook
@@ -25,4 +25,5 @@ function ItemBook:GetItem(id)
     return self.items[id]
 end
 
+Bastion.ItemBook = ItemBook
 return ItemBook

@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 -- Define a Cacheable class
 ---@class Cacheable
@@ -77,4 +77,5 @@ function Cacheable:SetCallback(cb)
     self.callback = cb
 end
 
+Bastion.Cacheable = Cacheable
 return Cacheable

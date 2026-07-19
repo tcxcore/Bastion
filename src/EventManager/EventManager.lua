@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 -- Create an EventManager class
 ---@class EventManager
@@ -79,4 +79,5 @@ function EventManager:TriggerEvent(event, ...)
     end
 end
 
+Bastion.EventManager = EventManager
 return EventManager

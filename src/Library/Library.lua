@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 ---@class Library
 ---@field name string
@@ -120,4 +120,5 @@ function Library:Import(library)
     return lib:Resolve()
 end
 
+Bastion.Library = Library
 return Library

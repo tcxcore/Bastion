@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 -- Create a new SpellBook class
 ---@class SpellBook
@@ -62,4 +62,5 @@ function SpellBook:GetIfRegistered(id)
     return self.spells[id]
 end
 
+Bastion.SpellBook = SpellBook
 return SpellBook

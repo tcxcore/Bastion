@@ -1,3 +1,4 @@
+local tcx, Bastion = ...
 -- Bastion 模块类
 -- 支持声明式设置系统，UI 可自动根据设置定义生成对应控件
 
@@ -204,4 +205,5 @@ function Module:ImportSettings(data)
     end
 end
 
+Bastion.Module = Module
 return Module

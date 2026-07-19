@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 local C_Spell = setmetatable({}, { __index = _G.C_Spell })
 if _G.C_Spell then
     C_Spell.GetSpellCooldown = function(spellId)
@@ -756,4 +756,5 @@ function Spell:IsFree()
     return self:GetCost() == 0
 end
 
+Bastion.Spell = Spell
 return Spell

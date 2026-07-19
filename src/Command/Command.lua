@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 -- Create a wow command handler class
 ---@class Command
@@ -78,4 +78,5 @@ function Command:PrintHelp()
     end
 end
 
+Bastion.Command = Command
 return Command

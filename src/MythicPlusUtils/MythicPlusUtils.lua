@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 ---@class MythicPlusUtils
 local MythicPlusUtils = {
@@ -583,4 +583,5 @@ function MythicPlusUtils:IsAOEBoss(unit)
     return self.aoeBosses[unit:GetID()]
 end
 
+Bastion.MythicPlusUtils = MythicPlusUtils
 return MythicPlusUtils

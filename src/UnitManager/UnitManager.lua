@@ -1,7 +1,17 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 local Unit = Bastion.Unit
+
+-- 获取缓存 Key 的统一辅助函数，优先保持传入参数的最简形态
+local function GetCacheKey(param)
+    if not param then return nil end
+    local t = type(param)
+    if t == "userdata" then
+        return TCX.ObjectGUID(param) or tostring(param)
+    end
+    return param
+end
 
 -- Create a new UnitManager class
 ---@class UnitManager
@@ -33,20 +43,16 @@ function UnitManager:__index(k)
         return self.customUnits[k].unit
     end
 
-    local kguid = TCX.ObjectGUID(k)
+    local key = GetCacheKey(k)
 
-    if kguid and self.objects[kguid] then
-        return self.objects[kguid]
+    if key and self.objects[key] then
+        return self.objects[key]
     end
 
-    -- if not Validate(k) then
-    --     error("UnitManager:Get - Invalid token: " .. k)
-    -- end
-
-    if self.objects[kguid] == nil then
-        local o = TCX.Object(k)
-        if o then
-            local unit = Unit:New(k)
+    if key and self.objects[key] == nil then
+        -- 仅当该对象能在游戏内被正确检索出时才进行创建
+        if type(k) == "userdata" or TCX.Object(k) then
+            local unit = Unit:New(k) -- 直接用 k 实例创建，不进行二次转换
             self:SetObject(unit)
             return unit
         end
@@ -66,34 +72,30 @@ function UnitManager:New()
 end
 
 -- Get or create a unit
----@param token string
+---@param token string | userdata
 ---@return Unit
 function UnitManager:Get(token)
-    -- if not Validate(token) then
-    --     error("UnitManager:Get - Invalid token: " .. token)
-    -- end
-
-    local tguid = TCX.ObjectGUID(token)
-
-    if tguid and self.objects[tguid] == nil then
-        if token == 'none' then
+    if token == 'none' or not token then
+        if not self.objects['none'] then
             self.objects['none'] = Unit:New()
-        else
-            self.objects[tguid] = Unit:New(token)
         end
+        return self.objects['none']
     end
 
-    return Bastion.Refreshable:New(self.objects[tguid], function()
-        local tguid = TCX.ObjectGUID(token) or "none"
+    local key = GetCacheKey(token)
 
-        if self.objects[tguid] == nil then
-            if token == 'none' then
-                self.objects['none'] = Unit:New()
-            else
-                self.objects[tguid] = Unit:New(token)
-            end
+    if key and self.objects[key] == nil then
+        -- 创建对象时直接用原始参数创建，不转换
+        self.objects[key] = Unit:New(token)
+    end
+
+    return Bastion.Refreshable:New(self.objects[key], function()
+        local curKey = GetCacheKey(token) or "none"
+
+        if self.objects[curKey] == nil then
+            self.objects[curKey] = Unit:New(token)
         end
-        return self.objects[tguid]
+        return self.objects[curKey]
     end)
 end
 
@@ -341,4 +343,5 @@ function UnitManager:FindEnemiesCentroid(radius, range)
     return centroid
 end
 
+Bastion.UnitManager = UnitManager
 return UnitManager

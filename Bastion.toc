@@ -1,0 +1,34 @@
+## Title: Bastion
+## Version: 1.0.0
+## Notes: Bastion Framework
+
+src/TCXAdapter/TCXAdapter.lua
+src/ClassMagic/ClassMagic.lua
+src/List/List.lua
+src/Library/Library.lua
+src/NotificationsList/NotificationsList.lua
+src/Vector3/Vector3.lua
+src/Sequencer/Sequencer.lua
+src/Command/Command.lua
+src/Locale/Locale.lua
+src/Cache/Cache.lua
+src/Cacheable/Cacheable.lua
+src/Refreshable/Refreshable.lua
+src/Unit/Unit.lua
+src/Aura/Aura.lua
+src/APL/APL.lua
+src/Module/Module.lua
+src/UnitManager/UnitManager.lua
+src/ObjectManager/ObjectManager.lua
+src/EventManager/EventManager.lua
+src/Spell/Spell.lua
+src/SpellBook/SpellBook.lua
+src/Item/Item.lua
+src/ItemBook/ItemBook.lua
+src/AuraTable/AuraTable.lua
+src/Class/Class.lua
+src/Timer/Timer.lua
+src/MythicPlusUtils/MythicPlusUtils.lua
+src/BastionUI/ConfigManager.lua
+src/BastionUI/BastionUI.lua
+src/bastion.lua

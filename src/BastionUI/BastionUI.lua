@@ -3,7 +3,7 @@
 -- 包含：圆形贴边小地图图标、现代化宽屏双栏控制面板、扁平化自定义控件
 
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 ---@class BastionUI
 local BastionUI = {}
@@ -1276,4 +1276,5 @@ function BastionUI:_CheckHotkey(id, callback)
     end
 end
 
+Bastion.BastionUI = BastionUI
 return BastionUI

@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 -- Define a Refreshable class
 ---@class Refreshable
@@ -72,4 +72,5 @@ function Refreshable:SetCallback(cb)
     self.callback = cb
 end
 
+Bastion.Refreshable = Refreshable
 return Refreshable

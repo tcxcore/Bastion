@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 -- Create a new Class class
 ---@class Class
@@ -71,4 +71,5 @@ function Class:GetColor()
     return C_ClassColor.GetClassColor(self.class.name)
 end
 
+Bastion.Class = Class
 return Class

@@ -1,5 +1,5 @@
 local tcx, Bastion = ...
-local TCX = tcx
+local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 
 -- Create a new Timer class
 ---@class Timer
@@ -46,4 +46,5 @@ function Timer:Reset()
     self.startTime = nil
 end
 
+Bastion.Timer = Timer
 return Timer
