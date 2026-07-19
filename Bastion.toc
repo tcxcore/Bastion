@@ -1,5 +1,5 @@
 ## Title: Bastion
-## Version: 1.0.1
+## Version: 1.0.2
 ## Notes: Bastion Framework
 
 src/TCXAdapter/TCXAdapter.lua
