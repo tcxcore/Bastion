@@ -301,7 +301,7 @@ local function InitializeInGame()
                     Bastion.UI:SaveFrameworkConfig()
                 end
             end
-            Bastion:Print(L["Combat state set to: "] .. (Bastion.Enabled and L["Enabled"] or L["Disabled"]))
+            -- Bastion:Print(L["Combat state set to: "] .. (Bastion.Enabled and L["Enabled"] or L["Disabled"]))
         end
 
         hostFrame.SelectRotation = function(self, moduleName)
