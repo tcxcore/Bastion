@@ -290,6 +290,67 @@ local function InitializeInGame()
             end
         end
 
+        hostFrame.SetCombatState = function(self, enabled)
+            local val = (enabled == true or enabled == 1)
+            Bastion.Enabled = val
+            if Bastion.UI then
+                if Bastion.UI.UpdateStatusBar then
+                    Bastion.UI:UpdateStatusBar()
+                end
+                if Bastion.UI.SaveFrameworkConfig then
+                    Bastion.UI:SaveFrameworkConfig()
+                end
+            end
+            Bastion:Print(L["Combat state set to: "] .. (Bastion.Enabled and L["Enabled"] or L["Disabled"]))
+        end
+
+        hostFrame.SelectRotation = function(self, moduleName)
+            if Bastion.UI and Bastion.UI.OnModuleSelected then
+                Bastion.UI:OnModuleSelected(moduleName)
+                return true
+            end
+
+            -- 后台 Fallback 模块状态切换与保存
+            local found = false
+            for i = 1, #MODULES do
+                if MODULES[i].name == moduleName then
+                    MODULES[i]:Enable()
+                    found = true
+                else
+                    MODULES[i]:Disable()
+                end
+            end
+
+            if Bastion.Config and Bastion.Config.SaveAll then
+                Bastion.Config:SaveAll(MODULES)
+            end
+
+            return found
+        end
+
+        hostFrame.GetRotations = function(self)
+            local names = {}
+            for i = 1, #MODULES do
+                table.insert(names, MODULES[i].name)
+            end
+            return names
+        end
+
+        hostFrame.GetCombatState = function(self)
+            local activeRotation = nil
+            if Bastion.UI and Bastion.UI.selectedModule then
+                activeRotation = Bastion.UI.selectedModule.name
+            else
+                for i = 1, #MODULES do
+                    if MODULES[i].enabled then
+                        activeRotation = MODULES[i].name
+                        break
+                    end
+                end
+            end
+            return Bastion.Enabled, activeRotation
+        end
+
         if hostFrame.pendingModules then
             for _, createFunc in ipairs(hostFrame.pendingModules) do
                 hostFrame:RegisterModule(createFunc)
