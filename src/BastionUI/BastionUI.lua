@@ -445,7 +445,7 @@ function BastionUI:New()
     self.currentTab = "modules"
     self.selectedModule = nil
     self.settingsWidgets = {}
-    self.minimapDB = { hide = false, angle = 0 }
+    self.minimapDB = { hide = false, angle = 225 }
     self._keyStates = {}
 
     self.hotkeys = {
@@ -505,11 +505,32 @@ end
 ----------------------------------------------------------------------
 
 function BastionUI:CreateMinimapButton()
+    local ui = self
+    -- 避免重复创建
+    if _G["BastionMinimapButton"] then return end
+
     local btn = CreateFrame("Button", "BastionMinimapButton", Minimap)
     btn:SetSize(31, 31)
-    btn:RegisterForClicks("AnyUp") -- 开启右键点击等所有事件注册支持
+    btn:SetFrameStrata("MEDIUM")
+    btn:SetFixedFrameStrata(true)
     btn:SetFrameLevel(Minimap:GetFrameLevel() + 5)
+    btn:SetFixedFrameLevel(true)
+    btn:EnableMouse(true)
     btn:SetMovable(true)
+    btn:RegisterForDrag("LeftButton")
+    btn:RegisterForClicks("AnyUp")
+
+    -- 重新设定位置 (根据保存的角度，采用与 Ace3 / LibDBIcon 完全一致的自适应半径极坐标定位)
+    local function UpdatePosition(deg)
+        local rad = math.rad(deg)
+        -- 自适应获取当前小地图的半径并加 5 像素偏置
+        local w = (Minimap:GetWidth() / 2) + 5
+        local h = (Minimap:GetHeight() / 2) + 5
+        
+        local x = math.cos(rad) * w
+        local y = math.sin(rad) * h
+        btn:SetPoint("CENTER", Minimap, "CENTER", x, y)
+    end
 
     -- 图标贴图（使用 Kyrian 图标，引入圆形 Mask 彻底切除方形黑角）
     local background = btn:CreateTexture(nil, "BACKGROUND")
@@ -530,47 +551,41 @@ function BastionUI:CreateMinimapButton()
 
     -- 鼠标悬停高亮淡光
     btn:SetHighlightTexture("Interface\\Minimap\\RegularMinimap-Highlight")
-
-    -- 圆周定位函数
-    local function UpdatePosition(angle)
-        local radius = (Minimap:GetWidth() / 2) + 12 -- 动态根据小地图宽度计算半径，确保完美贴在最外圈
-        local x = radius * math.cos(angle)
-        local y = radius * math.sin(angle)
-        btn:SetPoint("CENTER", Minimap, "CENTER", x, y)
-    end
-
-    -- 初始化位置
-    UpdatePosition(self.minimapDB.angle or 0)
-
-    -- 拖拽交互
-    btn:RegisterForDrag("LeftButton")
+    -- 拖拽事件逻辑
     btn:SetScript("OnDragStart", function(self)
+        self:LockHighlight()
         self:SetScript("OnUpdate", function(self)
-            local mx, my = GetCursorPosition()
-            local cx, cy = Minimap:GetCenter()
+            local px, py = GetCursorPosition()
+            local mx, my = Minimap:GetCenter()
             local scale = Minimap:GetEffectiveScale()
-            local x = (mx / scale) - cx
-            local y = (my / scale) - cy
-            local angle = math.atan2(y, x)
-            btn.angle = angle
-            UpdatePosition(angle)
+
+            -- 统一换算至物理坐标做差求角度，彻底根除由于不同 UI Scale 产生的投影变形和偏心问题
+            local dx = px - (mx * scale)
+            local dy = py - (my * scale)
+            
+            local angle = math.atan2(dy, dx)
+            local deg = math.deg(angle) % 360
+
+            -- 保存位置到配置中
+            ui.minimapDB.angle = deg
+            ui:SaveFrameworkConfig()
+
+            UpdatePosition(deg)
         end)
     end)
+
     btn:SetScript("OnDragStop", function(self)
         self:SetScript("OnUpdate", nil)
-        if self.angle then
-            self:GetParent().BastionUIObj.minimapDB.angle = self.angle
-            self:GetParent().BastionUIObj:SaveFrameworkConfig()
-        end
+        self:UnlockHighlight()
     end)
 
     -- 挂载反向引用方便拖动取回 DB
-    Minimap.BastionUIObj = self
+    Minimap.BastionUIObj = ui
 
     -- 点击响应
     btn:SetScript("OnClick", function(_, button)
         if button == "LeftButton" then
-            self:Toggle()
+            ui:Toggle()
         elseif button == "RightButton" then
             Bastion.Enabled = not Bastion.Enabled
             if Bastion.Enabled then
@@ -578,8 +593,8 @@ function BastionUI:CreateMinimapButton()
             else
                 Bastion:Print(L["Disabled"] or "关闭")
             end
-            self:UpdateStatusBar()
-            self:SaveFrameworkConfig()
+            ui:UpdateStatusBar()
+            ui:SaveFrameworkConfig()
         end
     end)
 
@@ -590,11 +605,19 @@ function BastionUI:CreateMinimapButton()
         GameTooltip:AddLine(" ")
         GameTooltip:AddDoubleLine(L["Left-Click"] or "左键点击", L["Toggle UI panel"] or "控制面板显示/隐藏", 1,1,1, 0.8,0.8,0.8)
         GameTooltip:AddDoubleLine(L["Right-Click"] or "右键点击", L["Toggle Bastion on/off"] or "开关主框架", 1,1,1, 0.8,0.8,0.8)
+        GameTooltip:AddDoubleLine(L["Drag"] or "按住拖拽", L["Adjust minimap button position"] or "调整图标位置", 1,1,1, 0.8,0.8,0.8)
         GameTooltip:Show()
     end)
     btn:SetScript("OnLeave", function()
         GameTooltip:Hide()
     end)
+
+    -- 初始化设定位置 (默认小地图左下角 225 度，可根据旧的弧度转换)
+    local initialDeg = ui.minimapDB.angle or 225
+    if initialDeg ~= 225 and math.abs(initialDeg) <= 2 * math.pi then
+        initialDeg = math.deg(initialDeg) % 360
+    end
+    UpdatePosition(initialDeg)
 end
 
 ----------------------------------------------------------------------

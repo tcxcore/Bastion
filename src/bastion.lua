@@ -336,6 +336,14 @@ local function InitializeInGame()
             return names
         end
 
+        hostFrame.GetRotationDisplayName = function(self, moduleName)
+            local module = Bastion:FindModule(moduleName)
+            if module then
+                return module:GetDisplayName()
+            end
+            return moduleName
+        end
+
         hostFrame.GetCombatState = function(self)
             local activeRotation = nil
             if Bastion.UI and Bastion.UI.selectedModule then
