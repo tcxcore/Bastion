@@ -10,6 +10,18 @@ if _G.C_UnitAuras then
     end
 end
 
+local GetSpellInfo = function(spellId)
+    if C_Spell and C_Spell.GetSpellInfo then
+        local info = C_Spell.GetSpellInfo(spellId)
+        if info then
+            return info.name, nil, info.iconID, info.castTime, info.minRange, info.maxRange, info.spellID
+        end
+    elseif _G.GetSpellInfo then
+        return _G.GetSpellInfo(spellId)
+    end
+    return nil
+end
+
 -- Create a new AuraTable class
 ---@class AuraTable
 local AuraTable = {}
