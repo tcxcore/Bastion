@@ -67,39 +67,40 @@ function ConfigManager:SaveAll(modules)
     end
 end
 
---- 将已保存的配置应用到所有已注册模块（读取独立配置文件）
----@param modules table 模块列表
-function ConfigManager:LoadAll(modules)
-    -- 恢复各模块（战斗循环）独立配置
-    for i = 1, #modules do
-        local m = modules[i]
-        local moduleFile = CONFIG_DIR .. m.name .. ".json"
-        local saved = nil
-
-        if TCX.FileExists(moduleFile) then
-            local content = TCX.ReadFile(moduleFile)
-            if content and content ~= "" then
-                local ok, result = pcall(function()
-                    return TCX.JsonDecode(content)
-                end)
-                if ok and type(result) == "table" then
-                    saved = result
+--- 恢复单个模块的保存配置
+---@param m Module
+function ConfigManager:LoadModuleConfig(m)
+    if not m or not m.name then return end
+    self:EnsureDir()
+    local moduleFile = CONFIG_DIR .. m.name .. ".json"
+    if TCX.FileExists and TCX.FileExists(moduleFile) then
+        local content = TCX.ReadFile(moduleFile)
+        if content and content ~= "" then
+            local ok, result = pcall(function()
+                return TCX.JsonDecode(content)
+            end)
+            if ok and type(result) == "table" then
+                if result.enabled ~= nil then
+                    if result.enabled then
+                        m:Enable()
+                    else
+                        m:Disable()
+                    end
+                end
+                if result.settings then
+                    m:ImportSettings(result.settings)
                 end
             end
         end
+    end
+end
 
-
-
-        if saved then
-            if saved.enabled then
-                m:Enable()
-            else
-                m:Disable()
-            end
-            if saved.settings then
-                m:ImportSettings(saved.settings)
-            end
-        end
+--- 将已保存的配置应用到所有已注册模块（读取独立配置文件）
+---@param modules table 模块列表
+function ConfigManager:LoadAll(modules)
+    if not modules then return end
+    for i = 1, #modules do
+        self:LoadModuleConfig(modules[i])
     end
 end
 

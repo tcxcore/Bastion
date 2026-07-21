@@ -6,7 +6,7 @@ local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 local Class = {}
 
 function Class:__index(k)
-    local response = Bastion.ClassMagic:Resolve(Class, k)
+    local response = Bastion.ClassMagic:Resolve(Class, k, self)
 
     if response == nil then
         response = rawget(self, k)

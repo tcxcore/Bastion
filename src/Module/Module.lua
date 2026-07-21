@@ -131,6 +131,10 @@ end
 ---@param defs table 设置定义数组
 function Module:DefineSettings(defs)
     self.settingDefs = defs
+    -- 尝试优先恢复硬盘上该模块已保存的 JSON 设置
+    if Bastion and Bastion.ConfigManager and Bastion.ConfigManager.LoadModuleConfig then
+        Bastion.ConfigManager:LoadModuleConfig(self)
+    end
     -- 初始化默认值（仅当未设置时）
     for _, def in ipairs(defs) do
         if def.key and def.default ~= nil and self.settings[def.key] == nil then

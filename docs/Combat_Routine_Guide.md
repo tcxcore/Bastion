@@ -1,6 +1,6 @@
 # Bastion 框架战斗循环开发指南
 
-Bastion 是一个基于 TCX 引擎的高性能 Lua 战斗框架。为了最大化发挥其 C# 层的内存读取优势，框架内部实现了 `Refreshable` (自动刷新缓存) 和 `SpellBook` (单例法术库)。
+Bastion 是一个基于 TCX 引擎的高性能 Lua 战斗框架。为了最大化发挥其 C++ 层的内存读取优势，框架内部实现了 `Refreshable` (自动刷新缓存) 和 `SpellBook` (单例法术库)。
 
 在目前的架构中，所有战斗循环（Combat Routine，简称 CR）已改造成**外部独立注册**模式，存放在独立项目 **[Bastion-CR]** 中，不再内置于主框架目录。
 
@@ -143,40 +143,49 @@ end
 
 **适用场景**：模拟器 (SimulationCraft) 风格的开发者、动作极其标准且线性、希望将逻辑按模块拆分的庞大专精循环。
 
-### 模板示例：
+### 4.1 APL 高级特性与团队治疗支持 (v1.0.6)
+1. **`APL:AddGroupSpell` 团队智能目标判定**：专门针对治疗与小队/团队辅助设计。支持语法：`APL:AddGroupSpell(spell, function(friend) ... end, "lowest_hp")`。它会自动检索全队有效成员，按 `"lowest_hp"` (最残血) 或 `"most_deficit"` (缺血绝对值最多) 进行排序，**直接下发 `CastSpellByName(spellName, token)`** 施法，无需切换玩家目标！
+2. **`UnitManager:GetGroupUnits()` 3D+Token 双重保障**：自动结合 3D 内存对象池与原生 `party1~4`/`raid1~40` 索引，彻底避免远距离超视距队友漏检。
+3. **动态目标绑定**：`APL:AddSpell` / `AddItem` 会在运行时动态实时读取 `spell:GetTarget()`，完全支持在战斗中通过 `spell:SetTarget(newUnit)` 动态切换目标。
+4. **`APLTrait` 节流与缓存失效**：高频条件可通过 `Bastion.APLTrait:New(cb, ttl)` 包装（默认 0.05s 节流），并可通过 `trait:Invalidate()` 手动显式失效缓存。
+5. **Sequencer 安全降级**：当内嵌的 `Sequencer` 动作因 CD/能量不足未能成功释放时，APL 智能降级并自动下刷后续优先级动作，不会导致整帧死锁。
+6. **`APL:Reset()` 生命周期**：支持在脱战或重置模块时自动清空变量与重置内嵌序列器、Traits 状态。
+
+### 模板示例 (治疗 APL 范例)：
 ```lua
 local tcx = ...
 
 local _, englishClass = UnitClass("player")
-if englishClass ~= "WARLOCK" then return end
+if englishClass ~= "DRUID" then return end
 
 local function CreateModule(Bastion)
     local L = Bastion.Locale
 
     local Player = Bastion.UnitManager:Get('player')
-    local Target = Bastion.UnitManager:Get('target')
     local SpellBook = Bastion.SpellBook:New()
-    local Corruption = SpellBook:GetSpell(172)
-    local ShadowBolt = SpellBook:GetSpell(686)
+    local Rejuvenation = SpellBook:GetSpell(774)  -- 回春术
+    local Regrowth     = SpellBook:GetSpell(8936) -- 愈合
 
-    local M = Bastion.Module:New("WarlockInitial")
-    M:SetDisplayName("Warlock Initial", "术士新手")
+    local M = Bastion.Module:New("RestoDruidAPL")
+    M:SetDisplayName("Resto Druid APL", "恢复德鲁伊 APL")
 
     -- 初始化 APL 树
-    local CoreAPL = Bastion.APL:New("Core")
+    local HealAPL = Bastion.APL:New("HealCore")
 
-    -- 语法：APL:AddSpell(法术对象, 触发条件函数)
-    CoreAPL:AddSpell(Corruption, function()
-        return Target:IsValid() and not Target:IsDead() and not Target:HasAura(Corruption.id, "player")
-    end)
+    -- 规则 1：给血量 < 85% 且没有回春术的队友挂【回春术】 (最残血优先)
+    HealAPL:AddGroupSpell(Rejuvenation, function(friend)
+        return friend:IsAlive() and friend:HealthPercent() < 85 and not friend:HasAura(Rejuvenation.id, "player")
+    end, "lowest_hp")
 
-    CoreAPL:AddSpell(ShadowBolt, function()
-        return Target:IsValid() and not Target:IsDead()
-    end)
+    -- 规则 2：给血量 < 50% 的队友读【愈合】 (最缺血绝对值优先)
+    HealAPL:AddGroupSpell(Regrowth, function(friend)
+        return friend:IsAlive() and friend:HealthPercent() < 50
+    end, "most_deficit")
 
-    -- 挂载执行树
+    -- 挂载执行树 (脱战或重置时可调用 HealAPL:Reset())
     M:Sync(function()
-        CoreAPL:Execute()
+        if not Player:IsAffectingCombat() then return end
+        HealAPL:Execute()
     end)
 
     return M
@@ -191,9 +200,9 @@ end
 
 | 特性 | 过程式 (Procedural `M:Sync`) | 声明式 (Declarative `APL:New`) |
 | :--- | :--- | :--- |
-| **执行性能** | **极高** (纯原生 if 语句，无表遍历开销) | 中高 (每帧需要遍历 APL 列表) |
-| **可读性** | 适合自上而外的阅读逻辑，代码量极简 | 适合按树状结构管理巨型逻辑 |
-| **灵活性** | 极强，可随时插入极其复杂的运算 | 较弱，强依赖匿名 `function()` 返回布尔值 |
+| **执行性能** | **极高** (纯原生 if 语句，无表遍历开销) | 中高 (包含 APL 树遍历、排序与 Trait 缓存机制) |
+| **可读性** | 适合自上而外的阅读逻辑，代码量极简 | 适合按树状结构管理巨型逻辑或团队治疗优先级 |
+| **灵活性** | 极强，可随时插入极其复杂的运算 | 强，支持 APL 子树嵌套、团队智能目标 (`AddGroupSpell`) 与 Sequencer 下刷 |
 
 **最终指导原则**：
-在当前的 TCX-Retail / Bastion 环境下，**首选过程式短路闭包 (Procedural) 方案**。只有当面对类似“三系混合德鲁伊”或拥有几十个复合状态判断的满级大秘境模块时，才建议利用 APL 的子树嵌套特性来分割代码复杂度。
+在当前的 TCX-Retail / Bastion 环境下，**输出与坦克专精首选过程式短路闭包 (Procedural) 方案**；而在开发**团队治疗（奶德/奶骑/神牧/增辉）模块**或拥有复合逻辑的大型专精时，推荐利用 `AddGroupSpell` 声明式 APL 树来分割代码复杂度。

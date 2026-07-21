@@ -41,7 +41,7 @@ local usableExcludes = {
 }
 
 function Spell:__index(k)
-    local response = Bastion.ClassMagic:Resolve(Spell, k)
+    local response = Bastion.ClassMagic:Resolve(Spell, k, self)
 
     if response == nil then
         response = rawget(self, k)

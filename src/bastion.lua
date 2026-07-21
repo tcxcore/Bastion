@@ -35,6 +35,13 @@ function Bastion:Register(module)
     table.insert(MODULES, module)
     local L = Bastion.Locale or {}
     Bastion:Print(L["Registered"] or "Registered", module.name)
+
+    -- 注册模块时自动加载并恢复其硬盘上的已保存配置
+    if Bastion.Config and Bastion.Config.LoadModuleConfig then
+        Bastion.Config:LoadModuleConfig(module)
+    elseif Bastion.ConfigManager and Bastion.ConfigManager.LoadModuleConfig then
+        Bastion.ConfigManager:LoadModuleConfig(module)
+    end
 end
 
 function Bastion:FindModule(name)
@@ -143,35 +150,53 @@ local function InitializeInGame()
     -- 2. 职业脚本已被解耦为独立脚本自我注册，框架不再需要动态扫描及加载 class 脚本
     -- 直接执行后续的 Ticker 启动、命令注册及 UI 展示
 
-    -- 启动 Ticker 监控
-    local pguid = UnitGUID("player")
-    local missed = {}
+    -- 动态设置更新频率与启动 Ticker 监控 (默认 20Hz / 50ms)
+    function Bastion:SetUpdateFrequency(freq)
+        local hzMap = {
+            ["10Hz"] = 0.1,    [10] = 0.1,
+            ["20Hz"] = 0.05,   [20] = 0.05,
+            ["60Hz"] = 0.0166, [60] = 0.0166,
+        }
 
-    Bastion.Ticker = C_Timer.NewTicker(0.1, function()
-        -- 轮询周围单位的 UnitAffectingCombat 状态来更新战斗时间
-        local t = GetTime()
-        Bastion.UnitManager:EnumUnits(function(unit)
-            if unit and unit:IsAffectingCombat() then
-                unit:SetLastCombatTime(t)
+        local interval = hzMap[freq] or 0.05
+        self.UpdateFrequency = (type(freq) == "number" and (freq .. "Hz")) or freq or "20Hz"
+
+        if self.Ticker and self.Ticker.Cancel then
+            self.Ticker:Cancel()
+            self.Ticker = nil
+        end
+
+        self.Ticker = C_Timer.NewTicker(interval, function()
+            local t = GetTime()
+            if self.UnitManager and self.UnitManager.EnumUnits then
+                self.UnitManager:EnumUnits(function(unit)
+                    if unit and unit:IsAffectingCombat() then
+                        unit:SetLastCombatTime(t)
+                    end
+                end)
+            end
+
+            if self.CombatTimer then
+                if not self.CombatTimer:IsRunning() and TCX.ObjectIsInCombat("player") then
+                    self.CombatTimer:Start()
+                elseif self.CombatTimer:IsRunning() and not TCX.ObjectIsInCombat("player") then
+                    self.CombatTimer:Reset()
+                end
+            end
+
+            if self.Enabled then
+                if self.ObjectManager then self.ObjectManager:Refresh() end
+                local MODULES = self._MODULES or {}
+                for i = 1, #MODULES do MODULES[i]:Tick() end
+            end
+
+            if self.UI then
+                self.UI:ProcessHotkeys()
             end
         end)
+    end
 
-        if not Bastion.CombatTimer:IsRunning() and TCX.ObjectIsInCombat("player") then
-            Bastion.CombatTimer:Start()
-        elseif Bastion.CombatTimer:IsRunning() and not TCX.ObjectIsInCombat("player") then
-            Bastion.CombatTimer:Reset()
-        end
-
-        if Bastion.Enabled then
-            Bastion.ObjectManager:Refresh()
-            for i = 1, #MODULES do MODULES[i]:Tick() end
-        end
-
-        -- 快捷键轮询
-        if Bastion.UI then
-            Bastion.UI:ProcessHotkeys()
-        end
-    end)
+    Bastion:SetUpdateFrequency("20Hz")
 
     -- 初始化并注册 Slash 命令
     local Command = Bastion.Command:New('bastion')

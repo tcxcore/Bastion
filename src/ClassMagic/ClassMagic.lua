@@ -7,17 +7,21 @@ ClassMagic.__index = ClassMagic
 
 ---@param Class table
 ---@param key string
+---@param instance? table
 ---@return any
-function ClassMagic:Resolve(Class, key)
+function ClassMagic:Resolve(Class, key, instance)
     if Class[key] or Class[key] == false then
         return Class[key]
     end
 
-    if Class['Get' .. key:sub(1, 1):upper() .. key:sub(2)] then
-        local func = Class['Get' .. key:sub(1, 1):upper() .. key:sub(2)]
+    local obj = instance or (self ~= ClassMagic and self) or Class
+
+    local getMethod = 'Get' .. key:sub(1, 1):upper() .. key:sub(2)
+    if Class[getMethod] then
+        local func = Class[getMethod]
 
         -- Call the function and return the result if there's more than one return value return it as a table
-        local result = { func(self) }
+        local result = { func(obj) }
         if #result > 1 then
             return result
         end
@@ -26,11 +30,12 @@ function ClassMagic:Resolve(Class, key)
     end
 
 
-    if Class['Get' .. key:upper()] then
-        local func = Class['Get' .. key:upper()]
+    local getUpperMethod = 'Get' .. key:upper()
+    if Class[getUpperMethod] then
+        local func = Class[getUpperMethod]
 
         -- Call the function and return the result if there's more than one return value return it as a table
-        local result = { func(self) }
+        local result = { func(obj) }
         if #result > 1 then
             return result
         end
@@ -38,11 +43,12 @@ function ClassMagic:Resolve(Class, key)
         return result[1]
     end
 
-    if Class['Is' .. key:upper()] then
-        local func = Class['Is' .. key:upper()]
+    local isUpperMethod = 'Is' .. key:upper()
+    if Class[isUpperMethod] then
+        local func = Class[isUpperMethod]
 
         -- Call the function and return the result if there's more than one return value return it as a table
-        local result = { func(self) }
+        local result = { func(obj) }
         if #result > 1 then
             return result
         end

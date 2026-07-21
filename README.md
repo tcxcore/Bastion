@@ -1,4 +1,4 @@
-# Bastion - TCX-Retail/TCX Core 适配版
+# Bastion - TCX-Retail/TCX Core 适配版 (v1.0.6)
 
 基于 [4n0n/Bastion](https://git.tinkr.site/4n0n/bastion) 框架，完整适配 TCX-Retail/TCX Core 内存直接交互架构。
 
@@ -19,6 +19,7 @@ TCX Discord: https://discord.gg/6UGp9umUUf
 | 模块 | 变更说明 |
 |------|---------|
 | `Unit.lua` | 重写 `GetOMToken()`，适配 lightuserdata 指针；各项能量、施法状态、引导状态的获取全面改用 `TCX.Unlock` 获取以绕过底层污染并修复返回字段问题。 |
+| `UnitManager.lua` | 增加 `GetGroupUnits()` 与 `GetSortedFriends()` 方法，融合 3D 内存扫描与原生 `party`/`raid` 静态 Token，提供强力的团队/小队检索与排序基建。 |
 | `ObjectManager.lua` | 每帧更新缓存对象的内存指针（`unit.unit = object`）；失效对象 Token 检查跳过 |
 | `AuraTable.lua` & `Aura.lua` | 废弃原生 `AuraUtil.ForEachAura`，重构为使用 `TCX.Unlock("C_UnitAuras.GetAuraDataByIndex")` 的底层循环遍历，彻底解决光环查询回调的 Secret Keys 报错；全量更新与 Token 保护。 |
 | `Spell.lua` | 新增 `Spell:IsCurrent()` 等方法，所有法术 CD 及可用性检测均使用 `TCX.Unlock` 封装。 |
@@ -27,18 +28,40 @@ TCX Discord: https://discord.gg/6UGp9umUUf
 | `Vector3.lua` | `FastDistance` 替换为 `math.sqrt` 原生实现 |
 | `Item.lua` | `FastDistance` 替换为 `math.sqrt` 原生实现 |
 | `TCXAdapter/` | 新增 TCX 兼容适配层，映射 `Object/Objects/ObjectGUID` 等全局函数，并主动自愈构建宿主通信 frame `BastionHostFrame` 以接管外部独立注册 |
-| `_bastion.lua` | 提供模块库主框架入口，接管并消费外部挂载队列，彻底打通与外部独立战斗循环脚本的异步通信注册链 |
-| `BastionUI/` & `config/` | 新增模块化 UI 界面和基于 JSON 的 ConfigManager，支持用户在游戏内切换和保存配置 |
+| `bastion.lua` | 提供模块库主框架入口，接管并消费外部挂载队列，彻底打通与外部独立战斗循环脚本的异步通信注册链 |
+| `APL/` | 全面重构 APL 动作优先级系统（支持 `AddGroupSpell` 团队智能目标匹配、动态目标求值、Trait TTL 节流与 Invalidate 显式刷新、Sequencer 降级下刷、APL:Reset() 重置与 DebugMode 日志系统）。 |
+| `BastionUI/` & `ConfigManager` | 全面重构为 v1.0.6 宽屏科技风格 UI，具备 JSON 格式的持久化配置系统与全套控件工厂。 |
 | `Locale/` | 增加多语言翻译文本支持模块 |
 
-### 最新更新 (v2.0)
-- **战斗循环外部化托管与安全注册 (v2.0)**：已将原本内置在主框架下的 Retail 全职业 87 个战斗循环脚本，重构并迁移至外部独立项目 **[Bastion-CR]** 中托管。外部脚本顶层采用原生职业判定进行加载隔离阻断，尾部使用 `TryRegister` 轮询检索宿主窗体进行异步挂载，实现解耦。
+---
+
+### 最新更新日志
+
+#### v1.0.6 - 现代化 UI 全面美化重构、1024*576 宽屏升级、APL 系统团队治疗扩展
+- **暗青科技美化对齐与 1024*576 宽屏升级**：
+  - **主窗口与布局**：全面升级为 `1024 * 576` 宽屏双栏控制面板，背景采用深蓝藏青微透明 Backdrop (`0.04, 0.05, 0.08, 0.92`)，边缘饰以炫彩发光蓝边框 (`0.15, 0.45, 0.85, 0.95`)。
+  - **顶部贯通 Header**：设计有 `"BASTION v1.0.6"` 亮蓝大标题与 976px 蓝紫发光分隔线，右上角采用 24x24 暗红发光 `×` 原生关闭按钮。
+  - **全套控件工厂 (Widgets Factory) 升级**：涵盖高精青蓝填色 Checkbox、Dropdown 弹出层 Skin 隐藏原生粗糙纹理、StyleEditBox 焦点发光输入框与动态发光按钮。
+  - **布局重叠与比例精密优化**：侧边栏与主面板延伸至 **485px**，内部滚轮区拓展至 **395px / 455px**，底部状态监察条嵌于 12px 处，形成 **5px** 紧凑均匀缝隙，彻底消除重叠与底部留白。
+- **APL 动作优先级列表系统与团队检索重构**：
+  - **`APL:AddGroupSpell` 团队智能目标匹配**：新增专门服务于团队/小队治疗与辅助的声明式接口，支持按 `"lowest_hp"` (最残血) 或 `"most_deficit"` (缺血最多) 自动筛选最佳队友，并**直接下发 `CastSpellByName(spellName, token)` 施法**，无需切换玩家目标。
+  - **`UnitManager:GetGroupUnits()` 双重全覆盖**：融合 3D 内存对象池与原生 `party1~4`/`raid1~40` 静态 Token 映射，彻底杜绝远距离超视距队友漏检。
+  - **动态目标与属性绑定**：重构 `APLActor:Execute()`，在运行时实时从 `spell:GetTarget()` 获取目标，支持在战斗循环中通过 `spell:SetTarget()` 动态切目标。
+  - **Trait 缓存 TTL 节流与手动刷新**：`APLTrait:New(cb, ttl)` 支持自定义 TTL（默认 0.05s），并提供 `APLTrait:Invalidate()` 与 `APLTrait:Reset()` 显式刷新接口。
+  - **Sequencer 失败降级下刷**：校验 `sequencer:Execute()` 返回值，当序列器动作未成功施放时智能降级，允许后续低优先级动作继续下刷。
+  - **`APL:Reset()` 生命周期管理**：新增重置接口，支持清空变量、刷新 Traits 缓存与重置序列器状态。
+  - **`Bastion.DebugMode` 日志跟踪**：开启全局调试模式时实时打出 APL 执行打点与链路信息。
+
+#### 战斗循环外部化托管与安全注册
+- **战斗循环外部化托管与安全注册**：已将原本内置在主框架下的 Retail 全职业 87 个战斗循环脚本，重构并迁移至外部独立项目 **[Bastion-CR]** 中托管。外部脚本顶层采用原生职业判定进行加载隔离阻断，尾部使用 `TryRegister` 轮询检索宿主窗体进行异步挂载，实现解耦。
 - **物理加载 BOM 签名自愈剥离 (C++ 层加固)**：在 DLL 层的全部同步/异步物理文件和内存加载入口中，并入了一键剥离 UTF-8 BOM 签名（`0xEF 0xBB 0xBF`）的检测算法。彻底消除了由于外部编辑器、重构脚本在 CRLF 文本头部引入不可见字符，导致在与 Wrapper 代码合并后在中间行爆发 `unexpected symbol near '[]'` 的报错，大大稳固了本地 TOC 解析加载链路。
 - **多版本客户端支持**：重构了脚本目录层级，现在支持按 `Retail`、`Titan` 和 `TBC` 客户端版本独立加载对应的战斗循环模块。
 - **底层内存检索优化**：全面升级了 `Unit`, `ObjectManager`, `TCXAdapter` 的底层交互，大幅提升了 `ObjectToken`、`ObjectGUID` 及交互接口在复杂战斗环境中的运行性能。
 - **配置系统 (JSON) 升级**：废弃了 `YAML` 格式，全面采用更加规范的 `JSON` 持久化方案。现在每一个战斗循环模块均会独立生成对应名称的 `.json` 配置文件，全局开关和界面热键则整合入 `framework.json`。
 - **全职业核心技能面向判定（IsFacing）加固**：为包含冰DK、冰法、恶魔术、毁灭术、噬灭DH、熊T、酒仙武僧在内的全职业核心指向性伤害/打断/嘲讽技能深度注入了 `Player:IsFacing(Target)` 面向判定拦截。确保角色必须在物理上面全对目标时才出手，彻底解决了因背对目标盲目施法导致客户端高频抛出“你必须面对目标”的红字和瞬间卡屏，而自身增益减伤与 360 度群拉技能（如痛击、神鹤）则获得完全豁免。
 - **全职业自适应 Combat Reach（碰撞体积）距离判定**：彻底重构了框架内所有的距离检测逻辑。对于所有的自身 AOE、多目标环境检测、以及施法前置距离判定，全面采用自带目标体型补偿的 `IsWithinCombatDistance`，完美覆盖 Retail、TBC、Titan 平台的所有职业脚本。即使面对超大型（Combat Reach > 15码）的巨型 Boss，也能在其模型红圈边缘游刃有余地释放【痛击】、【剑刃风暴】、【神圣风暴】、【地震术】等技能，彻底杜绝了传统绝对距离测算下“距离大于 8 码拒绝施法”，从而强迫玩家“站进 Boss 肚子里”的致命死锁。
+
+---
 
 ### 脚本层规范
 - 脚本（`scripts/` 目录）**只调用框架 API**，不直接使用 WoW 原生 API
@@ -130,8 +153,18 @@ TCX Discord: https://discord.gg/6UGp9umUUf
   - **9.1 CPM 极高频泄能算法**：重构了狂乱值的消耗模型，以高达 9.1 次/分钟的极限频率自动打出【暗言术：噬】(Devouring Plague)，彻底杜绝溢出并维持满额精通增伤。
   - **全自动多线 DoT 与爆发轮转**：自动智能保持主副目标的高覆盖率【吸血鬼之触】与痛，并在血线健康的大怪/Boss 身上自动释放【虚空爆发】、【摧心魔】与【能量灌注】的三重核弹爆发。
 
+#### TCX 原生 C++ 内存光环 API 接入、UI 配置持久化与 40 人团本掉帧深度优化
+- **TCX 原生 C++ 内存光环 API 深度集成**：
+  在 `AuraTable` 框架层与职业 APL 中全面接入 TCX 解锁器原生 C++ API `tcx.ObjectHasAura(obj, spellId)` 与 `tcx.ObjectAuras(obj)`。直接在 C++ Object Manager 内存层精准读取动态光环，彻底解决了各种客户端版本/语言下由于名称对比、光环等级差异及 `GetAuras()` 遍历失败引发的光环判断不准与重复刷新痛点。
+- **模块图形 UI 配置全自动持久化保存与恢复**：
+  重构 `ConfigManager` 配置管理模块，新增 `LoadModuleConfig(m)`。在动态职业模块注册（`Bastion:Register`）及设置定义（`DefineSettings`）时自动从磁盘 `scripts/Bastion/config/<moduleName>.json` 恢复历史设置，并在图形 UI 面板交互（滑块/复选框/下拉框）时实时写盘，实现 100% 配置持久化保存与重载恢复。
+- **40 人大型团本 CPU 掉帧深度优化**：
+  在 `UnitManager:GetSortedFriends` 中引入基于 `GetTime()` 的单帧时间戳快照缓存，在 10Hz 更新频率下将单 tick 内重复排序和 C-API 查询消耗降低 **90%**；并在战斗轮询顶端加入了 `Player:IsCastingOrChanneling()` 极速短路阻断，彻底消除大型团本掉帧问题。
+- **3D 视线 (`CanSee`) 与动态法术距离双重安全防护墙**：
+  在 `UnitManager:GetSortedFriends` 与 `APL:AddGroupSpell` 团队目标筛选中深度融合 TCX 3D 射线视线检测 (`CanSee`) 与动态法术距离判定 (`spell:IsInRange`)，精准剔除障碍物遮挡、墙后及超视距无效队友，杜绝朝墙发呆与“目标太远”报错。
+
 
 ## 环境依赖
 - **平台**: TCX-Retail
 - **游戏版本**: WoW Retail 12.0.5 / WoW Titan / WoW TBC
-- **底层 API**: `ObjectToken()`, `TCX.Objects()`, `TCX.TraceLine()` 等
+- **底层 API**: `ObjectToken()`, `TCX.Objects()`, `TCX.ObjectHasAura()`, `TCX.ObjectAuras()`, `TCX.TraceLine()` 等

@@ -18,7 +18,7 @@ local usableExcludes = {
 }
 
 function Item:__index(k)
-    local response = Bastion.ClassMagic:Resolve(Item, k)
+    local response = Bastion.ClassMagic:Resolve(Item, k, self)
 
     if response == nil then
         response = rawget(self, k)

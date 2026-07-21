@@ -19,7 +19,7 @@ end
 local Aura = {}
 
 function Aura:__index(k)
-    local response = Bastion.ClassMagic:Resolve(Aura, k)
+    local response = Bastion.ClassMagic:Resolve(Aura, k, self)
 
     if response == nil then
         response = rawget(self, k)

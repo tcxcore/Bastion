@@ -1,6 +1,6 @@
--- Bastion UI 主控
--- 100% 基于魔兽原生 UI API 构建，完全不依赖任何外部插件库
--- 包含：圆形贴边小地图图标、现代化宽屏双栏控制面板、扁平化自定义控件
+-- Bastion UI 主控 (Gather-Titan-Free 美化对齐版)
+-- 基于魔兽原生 UI API 与 BackdropTemplate 构建
+-- 包含：1024*576 宽屏双栏控制面板、暗青发光科技风格、高精美化控件 (Dropdown / Checkbox / EditBox / CloseButton)
 
 local tcx, Bastion = ...
 local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
@@ -9,11 +9,12 @@ local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
 local BastionUI = {}
 BastionUI.__index = BastionUI
 
--- 面板尺寸 (现代化宽屏模式)
-local PANEL_WIDTH  = 820
-local PANEL_HEIGHT = 480
-local SIDEBAR_WIDTH = 240
-local CONTENT_WIDTH = PANEL_WIDTH - SIDEBAR_WIDTH - 20
+-- 面板尺寸 (对齐 Gather-Titan 1024 * 576 宽屏标准布局)
+local PANEL_WIDTH   = 1024
+local PANEL_HEIGHT  = 576
+local SIDEBAR_WIDTH = 180
+local CONTENT_WIDTH = 780
+local MAIN_CONTENT_HEIGHT = 485  -- 卡片延伸至底部，保留 5px 紧凑缝隙与 26px 状态栏
 
 -- 默认快捷键配置（虚拟键码）
 local DEFAULT_HOTKEYS = {
@@ -73,7 +74,6 @@ local L = setmetatable({}, {
 })
 
 local function GetSettingLabel(def)
-    -- 优先获取用户在设置里当前选定的语言，若无则回退到客户端默认语言
     local lang = (Bastion.Locale and Bastion.Locale._lang) or (GetLocale and GetLocale()) or "enUS"
     if (lang == "zhCN" or lang == "zhTW") and def.labelZh then
         return def.labelZh
@@ -82,72 +82,241 @@ local function GetSettingLabel(def)
 end
 
 ----------------------------------------------------------------------
--- 磨砂扁平化原生 UI 控件工厂 (Pure WoW API)
+-- Gather-Titan-Free 高精美化 Helper 函数
 ----------------------------------------------------------------------
 
--- 绘制扁平底面及一像素精致边框
-local function ApplyFlatStyle(frame, bgColor, borderColor)
-    bgColor = bgColor or { 0.12, 0.12, 0.12, 0.95 }
-    borderColor = borderColor or { 0.22, 0.22, 0.22, 1 }
+-- 统一 EditBox 美化函数 (焦点亮蓝高亮 + 文本缩进)
+local function StyleEditBox(editBox, width, height)
+    editBox:SetSize(width or 120, height or 26)
+    editBox:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    editBox:SetBackdropColor(0.04, 0.06, 0.1, 0.85)
+    editBox:SetBackdropBorderColor(0.18, 0.4, 0.75, 0.5)
+    editBox:SetFontObject("GameFontHighlightMed2")
+    editBox:SetTextInsets(8, 8, 0, 0)
 
-    -- 底色
-    local bg = frame.flatBg or frame:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints(frame)
-    bg:SetColorTexture(unpack(bgColor))
-    frame.flatBg = bg
-
-    -- 四边 1px 细线
-    local top = frame.flatBorderTop or frame:CreateTexture(nil, "BORDER")
-    top:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
-    top:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
-    top:SetHeight(1)
-    top:SetColorTexture(unpack(borderColor))
-    frame.flatBorderTop = top
-
-    local bottom = frame.flatBorderBottom or frame:CreateTexture(nil, "BORDER")
-    bottom:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
-    bottom:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
-    bottom:SetHeight(1)
-    bottom:SetColorTexture(unpack(borderColor))
-    frame.flatBorderBottom = bottom
-
-    local left = frame.flatBorderLeft or frame:CreateTexture(nil, "BORDER")
-    left:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
-    left:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
-    left:SetWidth(1)
-    left:SetColorTexture(unpack(borderColor))
-    frame.flatBorderLeft = left
-
-    local right = frame.flatBorderRight or frame:CreateTexture(nil, "BORDER")
-    right:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
-    right:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
-    right:SetWidth(1)
-    right:SetColorTexture(unpack(borderColor))
-    frame.flatBorderRight = right
+    editBox:SetScript("OnEditFocusGained", function(self)
+        self:SetBackdropBorderColor(0.18, 0.65, 1.0, 0.95)
+        self:SetBackdropColor(0.06, 0.09, 0.16, 0.95)
+    end)
+    editBox:SetScript("OnEditFocusLost", function(self)
+        self:SetBackdropBorderColor(0.18, 0.4, 0.75, 0.5)
+        self:SetBackdropColor(0.04, 0.06, 0.1, 0.85)
+    end)
 end
 
--- 创建现代扁平按钮
-local function CreateFlatButton(parent, text, width, height, isAccent)
-    local btn = CreateFrame("Button", nil, parent)
-    btn:SetSize(width, height)
+-- 强效美化原生 DropDownList 弹出层菜单面板
+local function SkinSingleDropDownList(list)
+    if not list then return end
+    
+    if list.NineSlice then list.NineSlice:SetAlpha(0) end
+    if list.Border then list.Border:SetAlpha(0) end
 
-    local normalColor = isAccent and { 0.70, 0.15, 0.15, 1 } or { 0.20, 0.20, 0.20, 1 }
-    local hoverColor  = isAccent and { 0.85, 0.20, 0.20, 1 } or { 0.30, 0.30, 0.30, 1 }
-    local borderColor = { 0.35, 0.35, 0.35, 1 }
+    local listName = list:GetName()
+    if listName then
+        local bd = _G[listName .. "Backdrop"] or _G[listName .. "MenuBackdrop"]
+        if bd then
+            if bd.NineSlice then bd.NineSlice:SetAlpha(0) end
+            bd:SetAlpha(0)
+        end
+    end
 
-    ApplyFlatStyle(btn, normalColor, borderColor)
+    local regions = { list:GetRegions() }
+    for _, region in ipairs(regions) do
+        if region:IsObjectType("Texture") then
+            local texturePath = region:GetTexture()
+            if texturePath then
+                region:SetAlpha(0)
+            end
+        end
+    end
 
-    local fontString = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    if not list.customBg then
+        local bg = CreateFrame("Frame", nil, list, "BackdropTemplate")
+        bg:SetPoint("TOPLEFT", 0, 0)
+        bg:SetPoint("BOTTOMRIGHT", 0, 0)
+        bg:SetFrameLevel(math.max(0, list:GetFrameLevel() - 1))
+        bg:SetBackdrop({
+            bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            tile = true, tileSize = 12, edgeSize = 12,
+            insets = { left = 2, right = 2, top = 2, bottom = 2 }
+        })
+        bg:SetBackdropColor(0.03, 0.05, 0.09, 0.95)
+        bg:SetBackdropBorderColor(0.18, 0.45, 0.85, 0.9)
+        list.customBg = bg
+    end
+end
+
+local function SkinDropDownLists()
+    for i = 1, 3 do
+        local list = _G["DropDownList" .. i]
+        if list then
+            SkinSingleDropDownList(list)
+            if list:IsShown() and not list.shiftedThisShow then
+                list.shiftedThisShow = true
+                local point, relTo, relPoint, xOfs, yOfs = list:GetPoint()
+                if point and relTo then
+                    list:SetPoint(point, relTo, relPoint, (xOfs or 0) + 8, yOfs or 0)
+                end
+            elseif not list:IsShown() then
+                list.shiftedThisShow = false
+            end
+        end
+    end
+end
+
+if type(hooksecurefunc) == "function" and not BastionUI.dropdownHooked then
+    BastionUI.dropdownHooked = true
+    hooksecurefunc("ToggleDropDownMenu", SkinDropDownLists)
+    hooksecurefunc("UIDropDownMenu_CreateFrames", SkinDropDownLists)
+    hooksecurefunc("UIDropDownMenu_SetText", function(frame, text)
+        if frame then
+            if frame.customText then
+                frame.customText:SetText(text or "")
+                frame.customText:SetTextColor(0.4, 0.9, 1.0, 1.0)
+            end
+            local name = frame:GetName()
+            if name and _G[name .. "Text"] then
+                _G[name .. "Text"]:SetAlpha(0)
+            end
+        end
+    end)
+end
+
+-- Dropdown 容器美化 (支持原生与自定义 Dropdown)
+local function StyleDropdown(dropdown, width)
+    width = width or 220
+    local name = dropdown:GetName()
+
+    if width then
+        UIDropDownMenu_SetWidth(dropdown, width)
+    end
+
+    local bg = dropdown.customBg
+    if not bg then
+        bg = CreateFrame("Frame", nil, dropdown, "BackdropTemplate")
+        bg:SetPoint("TOPLEFT", 16, -2)
+        bg:SetPoint("BOTTOMRIGHT", -25, 6)
+        bg:SetBackdrop({
+            bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            tile = true, tileSize = 12, edgeSize = 12,
+            insets = { left = 2, right = 2, top = 2, bottom = 2 }
+        })
+        bg:SetBackdropColor(0.04, 0.06, 0.1, 0.9)
+        bg:SetBackdropBorderColor(0.18, 0.45, 0.8, 0.7)
+        dropdown.customBg = bg
+    end
+
+    if not dropdown.customText then
+        local ct = bg:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
+        ct:SetPoint("LEFT", bg, "LEFT", 10, 0)
+        ct:SetPoint("RIGHT", bg, "RIGHT", -28, 0)
+        ct:SetJustifyH("LEFT")
+        ct:SetTextColor(0.4, 0.9, 1.0, 1.0)
+        dropdown.customText = ct
+    end
+
+    if name then
+        if _G[name .. "Left"] then _G[name .. "Left"]:SetAlpha(0) end
+        if _G[name .. "Middle"] then _G[name .. "Middle"]:SetAlpha(0) end
+        if _G[name .. "Right"] then _G[name .. "Right"]:SetAlpha(0) end
+        if _G[name .. "Text"] then _G[name .. "Text"]:SetAlpha(0) end
+
+        local btn = _G[name .. "Button"]
+        if btn then
+            btn:ClearAllPoints()
+            btn:SetPoint("RIGHT", bg, "RIGHT", -1, 0)
+            btn:SetSize(22, 22)
+
+            local normal = btn:GetNormalTexture()
+            if normal then normal:SetAlpha(0) end
+            local pushed = btn:GetPushedTexture()
+            if pushed then pushed:SetAlpha(0) end
+            local disabled = btn:GetDisabledTexture()
+            if disabled then disabled:SetAlpha(0) end
+            local highlight = btn:GetHighlightTexture()
+            if highlight then highlight:SetAlpha(0) end
+
+            if not btn.customBg then
+                local btnBg = CreateFrame("Frame", nil, btn, "BackdropTemplate")
+                btnBg:SetAllPoints()
+                btnBg:SetBackdrop({
+                    bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+                    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+                    tile = true, tileSize = 12, edgeSize = 12,
+                    insets = { left = 1, right = 1, top = 1, bottom = 1 }
+                })
+                btnBg:SetBackdropColor(0.08, 0.14, 0.25, 0.95)
+                btnBg:SetBackdropBorderColor(0.25, 0.6, 0.95, 0.9)
+
+                local arrow = btnBg:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                arrow:SetPoint("CENTER", 0, 0)
+                arrow:SetText("▼")
+                arrow:SetTextColor(0.4, 0.9, 1.0)
+                btnBg.arrow = arrow
+
+                btn:SetScript("OnEnter", function()
+                    btnBg:SetBackdropBorderColor(0.4, 0.85, 1.0, 1.0)
+                    btnBg:SetBackdropColor(0.12, 0.22, 0.38, 0.95)
+                    arrow:SetTextColor(1.0, 1.0, 1.0)
+                end)
+                btn:SetScript("OnLeave", function()
+                    btnBg:SetBackdropBorderColor(0.25, 0.6, 0.95, 0.9)
+                    btnBg:SetBackdropColor(0.08, 0.14, 0.25, 0.95)
+                    arrow:SetTextColor(0.4, 0.9, 1.0)
+                end)
+
+                btn.customBg = btnBg
+            end
+        end
+    end
+end
+
+----------------------------------------------------------------------
+-- 现代化 Backdrop 控件工厂 (Pure WoW BackdropTemplate)
+----------------------------------------------------------------------
+
+-- 创建 Gather-Titan 风格按钮
+local function CreateFlatButton(parent, text, width, height, isAccent, isWarning)
+    local btn = CreateFrame("Button", nil, parent, "BackdropTemplate")
+    btn:SetSize(width or 120, height or 28)
+    btn:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+
+    local normalBgColor     = isWarning and { 0.25, 0.05, 0.05, 0.6 } or (isAccent and { 0.1, 0.3, 0.6, 0.8 } or { 0.1, 0.15, 0.28, 0.6 })
+    local normalBorderColor = isWarning and { 0.8, 0.15, 0.15, 0.8 } or (isAccent and { 0.2, 0.5, 0.9, 0.9 } or { 0.25, 0.35, 0.55, 0.7 })
+    local hoverBgColor      = isWarning and { 0.35, 0.08, 0.08, 0.85 } or (isAccent and { 0.15, 0.45, 0.85, 0.95 } or { 0.15, 0.25, 0.45, 0.8 })
+    local hoverBorderColor  = isWarning and { 0.95, 0.25, 0.25, 0.95 } or (isAccent and { 0.3, 0.7, 1.0, 1.0 } or { 0.35, 0.55, 0.85, 0.9 })
+    local textColor         = (isAccent or isWarning) and { 1.0, 1.0, 1.0, 1.0 } or { 0.8, 0.9, 1.0, 1.0 }
+
+    btn:SetBackdropColor(unpack(normalBgColor))
+    btn:SetBackdropBorderColor(unpack(normalBorderColor))
+
+    local fontString = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
     fontString:SetPoint("CENTER", btn, "CENTER", 0, 0)
-    fontString:SetText(text)
-    fontString:SetTextColor(1, 1, 1, 1)
+    fontString:SetText(text or "")
+    fontString:SetTextColor(unpack(textColor))
     btn.fontString = fontString
 
     btn:SetScript("OnEnter", function(self)
-        self.flatBg:SetColorTexture(unpack(hoverColor))
+        self:SetBackdropColor(unpack(hoverBgColor))
+        self:SetBackdropBorderColor(unpack(hoverBorderColor))
+        self.fontString:SetTextColor(1, 1, 1, 1)
     end)
     btn:SetScript("OnLeave", function(self)
-        self.flatBg:SetColorTexture(unpack(normalColor))
+        self:SetBackdropColor(unpack(normalBgColor))
+        self:SetBackdropBorderColor(unpack(normalBorderColor))
+        self.fontString:SetTextColor(unpack(textColor))
     end)
     btn:SetScript("OnMouseDown", function(self)
         self.fontString:SetPoint("CENTER", self, "CENTER", 1, -1)
@@ -159,119 +328,192 @@ local function CreateFlatButton(parent, text, width, height, isAccent)
     return btn
 end
 
--- 创建磨砂复选框
+-- 创建 Gather-Titan 精密青蓝复选框
 local function CreateFlatCheckbox(parent, labelText, onClickCallback)
-    local cb = CreateFrame("CheckButton", nil, parent)
-    cb:SetSize(18, 18)
+    local cb = CreateFrame("CheckButton", nil, parent, "BackdropTemplate")
+    cb:SetSize(20, 20)
 
-    ApplyFlatStyle(cb, { 0.15, 0.15, 0.15, 1 }, { 0.35, 0.35, 0.35, 1 })
+    cb:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
 
-    -- 选中时的指示绿块
-    local checkedTexture = cb:CreateTexture(nil, "OVERLAY")
-    checkedTexture:SetSize(10, 10)
-    checkedTexture:SetPoint("CENTER", cb, "CENTER", 0, 0)
-    checkedTexture:SetColorTexture(0.0, 0.8, 0.2, 1)
-    cb:SetCheckedTexture(checkedTexture)
+    local checkMark = cb:CreateTexture(nil, "OVERLAY")
+    checkMark:SetSize(12, 12)
+    checkMark:SetPoint("CENTER", 0, 0)
+    checkMark:SetColorTexture(0.18, 0.65, 1.0, 1.0)
+    cb.checkMark = checkMark
 
-    -- 点击音效与事件
+    local label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
+    label:SetPoint("LEFT", cb, "RIGHT", 10, 0)
+    label:SetText(labelText or "")
+    label:SetTextColor(0.8, 0.9, 1.0)
+    cb.label = label
+
+    local function updateCheckState()
+        if cb:GetChecked() then
+            cb.checkMark:Show()
+            cb:SetBackdropBorderColor(0.18, 0.65, 1.0, 0.95)
+            cb:SetBackdropColor(0.08, 0.16, 0.28, 0.9)
+        else
+            cb.checkMark:Hide()
+            cb:SetBackdropBorderColor(0.18, 0.4, 0.7, 0.6)
+            cb:SetBackdropColor(0.04, 0.06, 0.1, 0.85)
+        end
+    end
+
+    cb:SetScript("OnEnter", function(self)
+        self:SetBackdropBorderColor(0.3, 0.7, 1.0, 0.9)
+    end)
+    cb:SetScript("OnLeave", function(self)
+        updateCheckState()
+    end)
+
     cb:SetScript("OnClick", function(self)
         PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+        updateCheckState()
         if onClickCallback then
             onClickCallback(self:GetChecked() == true)
         end
     end)
 
-    -- 标签文字
-    local label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    label:SetPoint("LEFT", cb, "RIGHT", 8, 0)
-    label:SetText(labelText)
-    cb.label = label
+    local origSetChecked = cb.SetChecked
+    cb.SetChecked = function(self, val)
+        origSetChecked(self, val)
+        updateCheckState()
+    end
 
+    updateCheckState()
     return cb
 end
 
--- 创建磨砂滑块
+-- 创建 Gather-Titan 炫蓝滑动条
 local function CreateFlatSlider(parent, labelText, width, minVal, maxVal, step)
-    local slider = CreateFrame("Slider", nil, parent)
+    local sliderFrame = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    sliderFrame:SetSize(width or 220, 50)
+    sliderFrame:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    sliderFrame:SetBackdropColor(0.03, 0.05, 0.08, 0.5)
+    sliderFrame:SetBackdropBorderColor(0.12, 0.35, 0.7, 0.4)
+
+    local label = sliderFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
+    label:SetPoint("TOPLEFT", sliderFrame, "TOPLEFT", 10, -6)
+    label:SetText(labelText or "")
+    label:SetTextColor(0.8, 0.9, 1.0)
+    sliderFrame.label = label
+
+    local valueText = sliderFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalMed2")
+    valueText:SetPoint("TOPRIGHT", sliderFrame, "TOPRIGHT", -10, -6)
+    valueText:SetTextColor(0.18, 0.65, 1.0)
+    sliderFrame.valueText = valueText
+
+    local slider = CreateFrame("Slider", nil, sliderFrame)
     slider:SetOrientation("HORIZONTAL")
-    slider:SetSize(width, 14)
-    slider:SetMinMaxValues(minVal, maxVal)
-    slider:SetValueStep(step)
+    slider:SetSize(width - 24, 10)
+    slider:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -8)
+    slider:SetMinMaxValues(minVal or 0, maxVal or 100)
+    slider:SetValueStep(step or 1)
     slider:SetObeyStepOnDrag(true)
 
-    -- 轨道底色
     local bg = slider:CreateTexture(nil, "BACKGROUND")
     bg:SetHeight(4)
     bg:SetPoint("LEFT", slider, "LEFT", 0, 0)
     bg:SetPoint("RIGHT", slider, "RIGHT", 0, 0)
-    bg:SetColorTexture(0.18, 0.18, 0.18, 1)
+    bg:SetColorTexture(0.08, 0.14, 0.25, 0.8)
 
-    -- 游标滑块
     local thumb = slider:CreateTexture(nil, "ARTWORK")
-    thumb:SetSize(8, 14)
-    thumb:SetColorTexture(0.70, 0.15, 0.15, 1)
+    thumb:SetSize(10, 16)
+    thumb:SetColorTexture(0.18, 0.65, 1.0, 1.0)
     slider:SetThumbTexture(thumb)
 
-    -- 左上角名称标签
-    local label = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    label:SetPoint("BOTTOMLEFT", slider, "TOPLEFT", 0, 4)
-    label:SetText(labelText)
-    slider.label = label
-
-    -- 右上角数值指示
-    local valueText = slider:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    valueText:SetPoint("BOTTOMRIGHT", slider, "TOPRIGHT", 0, 4)
-    slider.valueText = valueText
-
     slider:SetScript("OnValueChanged", function(self, value)
-        local fmt = (step % 1 == 0) and "%.0f" or "%.1f"
-        self.valueText:SetText(string.format(fmt, value))
-        if self.callback then
-            self.callback(value)
+        local fmt = ((step or 1) % 1 == 0) and "%.0f" or "%.1f"
+        sliderFrame.valueText:SetText(string.format(fmt, value))
+        if sliderFrame.callback then
+            sliderFrame.callback(value)
         end
     end)
 
-    slider.SetValueCallback = function(self, cb)
-        self.callback = cb
-    end
+    sliderFrame.SetValue = function(self, val) slider:SetValue(val) end
+    sliderFrame.GetValue = function(self) return slider:GetValue() end
+    sliderFrame.SetValueCallback = function(self, cb) self.callback = cb end
 
-    return slider
+    return sliderFrame
 end
 
--- 创建无污染扁平下拉列表
+-- 创建 Gather-Titan 风格下拉选择框 (自包含菜单，解决标题与按钮重叠问题)
 local function CreateFlatDropdown(parent, labelText, width)
-    local dd = CreateFrame("Frame", nil, parent)
-    dd:SetSize(width, 24)
+    local dd = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    dd:SetSize(width or 220, 52)
+    dd:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    dd:SetBackdropColor(0.03, 0.05, 0.08, 0.5)
+    dd:SetBackdropBorderColor(0.12, 0.35, 0.7, 0.4)
 
-    -- 主体选择按钮
-    local btn = CreateFrame("Button", nil, dd)
-    btn:SetAllPoints(dd)
-    ApplyFlatStyle(btn, { 0.18, 0.18, 0.18, 1 }, { 0.35, 0.35, 0.35, 1 })
-
-    local label = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    label:SetPoint("BOTTOMLEFT", btn, "TOPLEFT", 0, 4)
-    label:SetText(labelText)
+    -- 标题 Label 精确置顶
+    local label = dd:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
+    label:SetPoint("TOPLEFT", dd, "TOPLEFT", 10, -6)
+    label:SetText(labelText or "")
+    label:SetTextColor(0.8, 0.9, 1.0)
     dd.label = label
 
-    local valText = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    valText:SetPoint("LEFT", btn, "LEFT", 8, 0)
-    valText:SetText(L["Select Option"])
+    -- 选择按钮精确锚定在 Label 正下方 4px 处，彻底消除重叠
+    local btn = CreateFrame("Button", nil, dd, "BackdropTemplate")
+    btn:SetSize(width - 20, 24)
+    btn:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
+    btn:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    btn:SetBackdropColor(0.04, 0.06, 0.1, 0.9)
+    btn:SetBackdropBorderColor(0.18, 0.45, 0.8, 0.7)
+
+    local valText = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
+    valText:SetPoint("LEFT", btn, "LEFT", 10, 0)
+    valText:SetText(L["Select Option"] or "选择选项")
+    valText:SetTextColor(0.4, 0.9, 1.0, 1.0)
     dd.valText = valText
 
-    local arrow = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local arrow = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     arrow:SetPoint("RIGHT", btn, "RIGHT", -8, 0)
     arrow:SetText("▼")
-    arrow:SetTextColor(0.6, 0.6, 0.6, 1)
+    arrow:SetTextColor(0.4, 0.9, 1.0)
 
-    -- 弹出项菜单（覆盖在界面上层）
-    local menu = CreateFrame("Frame", nil, btn)
+    local menu = CreateFrame("Frame", nil, btn, "BackdropTemplate")
     menu:SetPoint("TOPLEFT", btn, "BOTTOMLEFT", 0, -2)
-    menu:SetSize(width, 100)
-    menu:SetFrameLevel(btn:GetFrameLevel() + 10)
-    ApplyFlatStyle(menu, { 0.14, 0.14, 0.14, 0.98 }, { 0.40, 0.40, 0.40, 1 })
+    menu:SetSize(width - 20, 100)
+    menu:SetFrameLevel(btn:GetFrameLevel() + 20)
+    menu:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    menu:SetBackdropColor(0.03, 0.05, 0.09, 0.95)
+    menu:SetBackdropBorderColor(0.18, 0.45, 0.85, 0.9)
     menu:Hide()
     dd.menu = menu
 
+    btn:SetScript("OnEnter", function()
+        btn:SetBackdropBorderColor(0.3, 0.7, 1.0, 0.9)
+        arrow:SetTextColor(1, 1, 1)
+    end)
+    btn:SetScript("OnLeave", function()
+        btn:SetBackdropBorderColor(0.18, 0.45, 0.8, 0.7)
+        arrow:SetTextColor(0.4, 0.9, 1.0)
+    end)
     btn:SetScript("OnClick", function(self)
         PlaySound(SOUNDKIT.IG_MAINMENU_OPTION)
         if menu:IsShown() then menu:Hide() else menu:Show() end
@@ -280,34 +522,33 @@ local function CreateFlatDropdown(parent, labelText, width)
     local items = {}
     dd.SetItems = function(self, newItems)
         items = newItems or {}
-        -- 移除旧子项
         if self.menu.buttons then
             for _, b in ipairs(self.menu.buttons) do b:Hide() b:SetParent(nil) end
         end
         self.menu.buttons = {}
 
-        local itemHeight = 20
+        local itemHeight = 22
         local totalHeight = #items * itemHeight + 6
         self.menu:SetHeight(totalHeight)
 
         for i, item in ipairs(items) do
-            local b = CreateFrame("Button", nil, self.menu)
-            b:SetSize(width - 6, itemHeight)
+            local b = CreateFrame("Button", nil, self.menu, "BackdropTemplate")
+            b:SetSize(width - 26, itemHeight)
             b:SetPoint("TOPLEFT", self.menu, "TOPLEFT", 3, -((i-1)*itemHeight + 3))
 
-            -- 鼠标悬停高亮
             local highlight = b:CreateTexture(nil, "BACKGROUND")
             highlight:SetAllPoints(b)
-            highlight:SetColorTexture(0.3, 0.3, 0.3, 0.5)
+            highlight:SetColorTexture(0.15, 0.3, 0.55, 0.6)
             highlight:Hide()
             b.highlight = highlight
 
             b:SetScript("OnEnter", function(self) self.highlight:Show() end)
             b:SetScript("OnLeave", function(self) self.highlight:Hide() end)
 
-            local t = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-            t:SetPoint("LEFT", b, "LEFT", 5, 0)
+            local t = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
+            t:SetPoint("LEFT", b, "LEFT", 8, 0)
             t:SetText(item.text)
+            t:SetTextColor(0.8, 0.9, 1.0)
 
             b:SetScript("OnClick", function()
                 PlaySound(SOUNDKIT.IG_MAINMENU_OPTION)
@@ -331,7 +572,7 @@ local function CreateFlatDropdown(parent, labelText, width)
                 return
             end
         end
-        self.valText:SetText(L["Select Option"])
+        self.valText:SetText(L["Select Option"] or "选择选项")
     end
 
     dd.SetOnSelect = function(self, cb)
@@ -341,37 +582,33 @@ local function CreateFlatDropdown(parent, labelText, width)
     return dd
 end
 
--- 创建极简无边框 ScrollFrame (包含扁平指示滚动条)
+-- 创建 Gather-Titan 极简 ScrollFrame (包含暗蓝发光轨道)
 local function CreateFlatScrollFrame(parent, width, height)
     local sf = CreateFrame("ScrollFrame", nil, parent)
     sf:SetSize(width, height)
 
     local content = CreateFrame("Frame", nil, sf)
-    content:SetSize(width - 8, 100)
+    content:SetSize(width - 12, 100)
     sf:SetScrollChild(content)
     sf.scrollContent = content
 
-    -- 滚动条轨道 (深灰色透明背景)
     local track = sf:CreateTexture(nil, "BACKGROUND")
     track:SetSize(4, height)
     track:SetPoint("RIGHT", sf, "RIGHT", 0, 0)
-    track:SetColorTexture(0.15, 0.15, 0.15, 0.3)
+    track:SetColorTexture(0.08, 0.14, 0.25, 0.4)
     sf.track = track
 
-    -- 滚动条滑块 (暗红色扁平设计)
     local thumb = sf:CreateTexture(nil, "ARTWORK")
     thumb:SetWidth(4)
-    thumb:SetColorTexture(0.70, 0.15, 0.15, 0.8)
+    thumb:SetColorTexture(0.18, 0.65, 1.0, 0.85)
     thumb:SetPoint("TOPRIGHT", sf, "TOPRIGHT", 0, 0)
     sf.thumb = thumb
 
-    -- 更新滚动条状态
     local function UpdateScrollbar(self)
         local range = self:GetVerticalScrollRange()
         local contentHeight = self.scrollContent:GetHeight()
         local viewHeight = self:GetHeight()
 
-        -- 安全过滤与除零防御：内容高度不足或视口异常时一律隐藏，绝不产生长条溢出
         if range <= 0 or contentHeight <= 0 or viewHeight <= 0 or contentHeight <= viewHeight then
             self.thumb:Hide()
             self.track:Hide()
@@ -381,8 +618,6 @@ local function CreateFlatScrollFrame(parent, width, height)
         self.track:Show()
 
         local scroll = self:GetVerticalScroll()
-
-        -- 计算滑块高度
         local thumbHeight = (viewHeight / contentHeight) * viewHeight
         if thumbHeight < 15 then thumbHeight = 15 end
         if thumbHeight > viewHeight then thumbHeight = viewHeight end
@@ -392,14 +627,12 @@ local function CreateFlatScrollFrame(parent, width, height)
         local maxThumbY = viewHeight - thumbHeight
         local thumbY = - (percent * maxThumbY)
         
-        -- 防溢出坐标锁定
         if thumbY > 0 then thumbY = 0 end
         if math.abs(thumbY) > maxThumbY then thumbY = -maxThumbY end
         
         self.thumb:SetPoint("TOPRIGHT", self, "TOPRIGHT", 0, thumbY)
     end
 
-    -- 极简滑轮滚动绑定
     sf:SetScript("OnMouseWheel", function(self, delta)
         local current = self:GetVerticalScroll()
         local newScroll = current - delta * 25
@@ -410,12 +643,10 @@ local function CreateFlatScrollFrame(parent, width, height)
         UpdateScrollbar(self)
     end)
 
-    -- 监听魔兽垂直滚动以刷新滑块位置
     sf:SetScript("OnVerticalScroll", function(self, offset)
         UpdateScrollbar(self)
     end)
 
-    -- 监听显示事件，延迟刷新对齐
     sf:SetScript("OnShow", function(self)
         C_Timer.After(0.02, function()
             UpdateScrollbar(self)
@@ -423,9 +654,8 @@ local function CreateFlatScrollFrame(parent, width, height)
     end)
 
     sf.SetContentHeight = function(self, newHeight)
-        self.scrollContent:SetSize(width - 8, newHeight)
+        self.scrollContent:SetSize(width - 12, newHeight)
         UpdateScrollbar(self)
-        -- 延迟下一帧再次刷新，对齐魔兽底层的异步 Layout 周期！
         C_Timer.After(0.02, function()
             UpdateScrollbar(self)
         end)
@@ -462,7 +692,6 @@ end
 ----------------------------------------------------------------------
 
 function BastionUI:Init()
-    -- 从配置中恢复快捷键和总开关状态
     if Bastion.ConfigManager then
         local cfg = Bastion.ConfigManager:LoadFrameworkSettings()
         if cfg then
@@ -482,6 +711,11 @@ function BastionUI:Init()
             end
             if cfg.minimapAngle then
                 self.minimapDB.angle = cfg.minimapAngle
+            end
+            if cfg.updateFrequency then
+                Bastion:SetUpdateFrequency(cfg.updateFrequency)
+            else
+                Bastion:SetUpdateFrequency("20Hz")
             end
             if cfg.language then
                 self.language = cfg.language
@@ -506,7 +740,6 @@ end
 
 function BastionUI:CreateMinimapButton()
     local ui = self
-    -- 避免重复创建
     if _G["BastionMinimapButton"] then return end
 
     local btn = CreateFrame("Button", "BastionMinimapButton", Minimap)
@@ -520,19 +753,15 @@ function BastionUI:CreateMinimapButton()
     btn:RegisterForDrag("LeftButton")
     btn:RegisterForClicks("AnyUp")
 
-    -- 重新设定位置 (根据保存的角度，采用与 Ace3 / LibDBIcon 完全一致的自适应半径极坐标定位)
     local function UpdatePosition(deg)
         local rad = math.rad(deg)
-        -- 自适应获取当前小地图的半径并加 5 像素偏置
         local w = (Minimap:GetWidth() / 2) + 5
         local h = (Minimap:GetHeight() / 2) + 5
-        
         local x = math.cos(rad) * w
         local y = math.sin(rad) * h
         btn:SetPoint("CENTER", Minimap, "CENTER", x, y)
     end
 
-    -- 图标贴图（使用 Kyrian 图标，引入圆形 Mask 彻底切除方形黑角）
     local background = btn:CreateTexture(nil, "BACKGROUND")
     background:SetSize(25, 25)
     background:SetPoint("CENTER", btn, "CENTER", 0, 0)
@@ -543,15 +772,13 @@ function BastionUI:CreateMinimapButton()
     mask:SetAllPoints(background)
     background:AddMaskTexture(mask)
 
-    -- 银质圆框（经精密物理坐标换算，采用黄金偏心拉正：向右下偏移 2px）
     local border = btn:CreateTexture(nil, "OVERLAY")
     border:SetSize(54, 54)
     border:SetPoint("TOPLEFT", btn, "TOPLEFT", -2, 1)
     border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
 
-    -- 鼠标悬停高亮淡光
     btn:SetHighlightTexture("Interface\\Minimap\\RegularMinimap-Highlight")
-    -- 拖拽事件逻辑
+
     btn:SetScript("OnDragStart", function(self)
         self:LockHighlight()
         self:SetScript("OnUpdate", function(self)
@@ -559,14 +786,12 @@ function BastionUI:CreateMinimapButton()
             local mx, my = Minimap:GetCenter()
             local scale = Minimap:GetEffectiveScale()
 
-            -- 统一换算至物理坐标做差求角度，彻底根除由于不同 UI Scale 产生的投影变形和偏心问题
             local dx = px - (mx * scale)
             local dy = py - (my * scale)
             
             local angle = math.atan2(dy, dx)
             local deg = math.deg(angle) % 360
 
-            -- 保存位置到配置中
             ui.minimapDB.angle = deg
             ui:SaveFrameworkConfig()
 
@@ -579,10 +804,8 @@ function BastionUI:CreateMinimapButton()
         self:UnlockHighlight()
     end)
 
-    -- 挂载反向引用方便拖动取回 DB
     Minimap.BastionUIObj = ui
 
-    -- 点击响应
     btn:SetScript("OnClick", function(_, button)
         if button == "LeftButton" then
             ui:Toggle()
@@ -598,7 +821,6 @@ function BastionUI:CreateMinimapButton()
         end
     end)
 
-    -- 悬停提示
     btn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:AddLine("|cFFDF362DBas|r|cFFFFFFFFtion|r")
@@ -612,7 +834,6 @@ function BastionUI:CreateMinimapButton()
         GameTooltip:Hide()
     end)
 
-    -- 初始化设定位置 (默认小地图左下角 225 度，可根据旧的弧度转换)
     local initialDeg = ui.minimapDB.angle or 225
     if initialDeg ~= 225 and math.abs(initialDeg) <= 2 * math.pi then
         initialDeg = math.deg(initialDeg) % 360
@@ -621,12 +842,12 @@ function BastionUI:CreateMinimapButton()
 end
 
 ----------------------------------------------------------------------
--- 现代化双栏宽屏主面板
+-- 现代化 Gather-Titan 风格 1024 * 576 主面板 (无重叠修正版)
 ----------------------------------------------------------------------
 
 function BastionUI:CreateMainFrame()
     -- 主窗口
-    local frame = CreateFrame("Frame", "BastionMainFrame", UIParent)
+    local frame = CreateFrame("Frame", "BastionMainFrame", UIParent, "BackdropTemplate")
     frame:SetSize(PANEL_WIDTH, PANEL_HEIGHT)
     frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     frame:EnableMouse(true)
@@ -636,29 +857,60 @@ function BastionUI:CreateMainFrame()
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
     frame:SetFrameLevel(100)
-    ApplyFlatStyle(frame, { 0.10, 0.10, 0.10, 0.96 }, { 0.22, 0.22, 0.22, 1 })
+
+    frame:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    })
+    frame:SetBackdropColor(0.04, 0.05, 0.08, 0.92)
+    frame:SetBackdropBorderColor(0.15, 0.45, 0.85, 0.95)
     self.frame = frame
 
-    -- 右上角关闭按钮 (现代化扁平风格)
-    local closeBtn = CreateFrame("Button", nil, frame)
-    closeBtn:SetSize(22, 22)
-    closeBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -12)
+    -- 顶部 Header 标题
+    local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", 24, -14)
+    title:SetText("BASTION v1.0.6")
+    title:SetTextColor(0.18, 0.65, 1.0)
+
+    -- 顶部 976px 蓝紫发光分隔线
+    local topDivider = frame:CreateTexture(nil, "BACKGROUND")
+    topDivider:SetColorTexture(0.15, 0.45, 0.85, 0.3)
+    topDivider:SetSize(976, 2)
+    topDivider:SetPoint("TOPLEFT", 24, -40)
+
+    -- 右上角关闭按钮 (Gather-Titan 专属暗红 × 发光样式)
+    local closeBtn = CreateFrame("Button", nil, frame, "BackdropTemplate")
+    closeBtn:SetSize(24, 24)
+    closeBtn:SetPoint("TOPRIGHT", -12, -10)
     closeBtn:SetFrameLevel(frame:GetFrameLevel() + 20)
-    
-    ApplyFlatStyle(closeBtn, { 0.15, 0.15, 0.15, 1 }, { 0.35, 0.35, 0.35, 1 })
-    
-    local closeText = closeBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    closeText:SetPoint("CENTER", closeBtn, "CENTER", 0, 0)
-    closeText:SetText("X")
-    closeText:SetTextColor(0.7, 0.7, 0.7, 1)
-    
+    closeBtn:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    closeBtn:SetBackdropColor(0.12, 0.05, 0.06, 0.85)
+    closeBtn:SetBackdropBorderColor(0.55, 0.2, 0.2, 0.7)
+
+    local closeTxt = closeBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
+    closeTxt:SetSize(24, 24)
+    closeTxt:SetPoint("CENTER", -0.5, 0.5)
+    closeTxt:SetJustifyH("CENTER")
+    closeTxt:SetJustifyV("MIDDLE")
+    closeTxt:SetText("×")
+    closeTxt:SetTextColor(0.9, 0.35, 0.35, 1.0)
+
     closeBtn:SetScript("OnEnter", function(self)
-        self.flatBg:SetColorTexture(0.85, 0.20, 0.20, 1)
-        closeText:SetTextColor(1, 1, 1, 1)
+        self:SetBackdropColor(0.3, 0.08, 0.09, 0.95)
+        self:SetBackdropBorderColor(0.9, 0.25, 0.25, 0.95)
+        closeTxt:SetTextColor(1.0, 1.0, 1.0, 1.0)
     end)
     closeBtn:SetScript("OnLeave", function(self)
-        self.flatBg:SetColorTexture(0.15, 0.15, 0.15, 1)
-        closeText:SetTextColor(0.7, 0.7, 0.7, 1)
+        self:SetBackdropColor(0.12, 0.05, 0.06, 0.85)
+        self:SetBackdropBorderColor(0.55, 0.2, 0.2, 0.7)
+        closeTxt:SetTextColor(0.9, 0.35, 0.35, 1.0)
     end)
     closeBtn:SetScript("OnClick", function()
         PlaySound(SOUNDKIT.IG_MAINMENU_CLOSE)
@@ -666,49 +918,85 @@ function BastionUI:CreateMainFrame()
     end)
 
     -- ============================================================
-    -- 左侧边栏 (Sidebar - 220px)
+    -- 左侧导航侧边栏 (navBg - 180px x 450px) - 为底部状态栏留下空间
     -- ============================================================
-    local sidebar = CreateFrame("Frame", nil, frame)
-    sidebar:SetSize(SIDEBAR_WIDTH, PANEL_HEIGHT)
-    sidebar:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
-    ApplyFlatStyle(sidebar, { 0.08, 0.08, 0.08, 0.98 }, { 0.20, 0.20, 0.20, 1 })
+    local navBg = CreateFrame("Frame", nil, frame, "BackdropTemplate")
+    navBg:SetSize(SIDEBAR_WIDTH, MAIN_CONTENT_HEIGHT)
+    navBg:SetPoint("TOPLEFT", 24, -48)
+    navBg:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    navBg:SetBackdropColor(0.02, 0.03, 0.05, 0.6)
+    navBg:SetBackdropBorderColor(0.1, 0.25, 0.45, 0.4)
 
-    -- 现代化 Logo
-    local logo = sidebar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    logo:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 15, -20)
-    logo:SetText("|cFFDF362DBas|r|cFFFFFFFFtion|r")
-
-    local logoSub = sidebar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    logoSub:SetPoint("LEFT", logo, "RIGHT", 6, 0)
-    logoSub:SetText("|cFF666666Control|r")
-
-    -- Tab 页选按钮
-    local tabModules = CreateFlatButton(sidebar, L["Module Management"] or "模块管理", SIDEBAR_WIDTH - 20, 26, true)
-    tabModules:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 10, -60)
+    -- Tab 页签按钮 (160x36 Backdrop 动态发光按钮)
+    local tabModules = CreateFrame("Button", nil, navBg, "BackdropTemplate")
+    tabModules:SetSize(160, 36)
+    tabModules:SetPoint("TOP", 0, -16)
+    tabModules:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    local t1Text = tabModules:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    t1Text:SetPoint("CENTER", 0, 0)
+    t1Text:SetText(L["Module Management"] or "模块管理")
+    tabModules.tText = t1Text
     self.tabModulesBtn = tabModules
 
-    local tabFramework = CreateFlatButton(sidebar, L["Framework Settings"] or "设置项", SIDEBAR_WIDTH - 20, 26, false)
-    tabFramework:SetPoint("TOPLEFT", tabModules, "BOTTOMLEFT", 0, -8)
+    local tabFramework = CreateFrame("Button", nil, navBg, "BackdropTemplate")
+    tabFramework:SetSize(160, 36)
+    tabFramework:SetPoint("TOP", 0, -60)
+    tabFramework:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    local t2Text = tabFramework:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    t2Text:SetPoint("CENTER", 0, 0)
+    t2Text:SetText(L["Framework Settings"] or "设置项")
+    tabFramework.tText = t2Text
     self.tabFrameworkBtn = tabFramework
 
     tabModules:SetScript("OnClick", function() self:SwitchTab("modules") end)
     tabFramework:SetScript("OnClick", function() self:SwitchTab("framework") end)
 
     -- ============================================================
-    -- 右侧主内容展示区 (480px)
+    -- 右侧主内容展示区 (780px x 450px) - 为底部状态栏留下空间
     -- ============================================================
     local mainArea = CreateFrame("Frame", nil, frame)
-    mainArea:SetSize(PANEL_WIDTH - SIDEBAR_WIDTH, PANEL_HEIGHT)
-    mainArea:SetPoint("TOPLEFT", sidebar, "TOPRIGHT", 0, 0)
+    mainArea:SetSize(CONTENT_WIDTH, MAIN_CONTENT_HEIGHT)
+    mainArea:SetPoint("TOPLEFT", navBg, "TOPRIGHT", 16, 0)
     self.mainArea = mainArea
 
-    -- 模块选择展示页
-    self.modulesPage = CreateFrame("Frame", nil, mainArea)
+    -- 模块选择展示页 (780x450 Backdrop 卡片)
+    self.modulesPage = CreateFrame("Frame", nil, mainArea, "BackdropTemplate")
     self.modulesPage:SetAllPoints(mainArea)
+    self.modulesPage:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    self.modulesPage:SetBackdropColor(0.02, 0.03, 0.05, 0.4)
+    self.modulesPage:SetBackdropBorderColor(0.1, 0.25, 0.45, 0.4)
 
-    -- 全局设置项页
-    self.frameworkPage = CreateFrame("Frame", nil, mainArea)
+    -- 全局设置项页 (780x450 Backdrop 卡片)
+    self.frameworkPage = CreateFrame("Frame", nil, mainArea, "BackdropTemplate")
     self.frameworkPage:SetAllPoints(mainArea)
+    self.frameworkPage:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    self.frameworkPage:SetBackdropColor(0.02, 0.03, 0.05, 0.4)
+    self.frameworkPage:SetBackdropBorderColor(0.1, 0.25, 0.45, 0.4)
     self.frameworkPage:Hide()
 
     -- ============================================================
@@ -718,20 +1006,33 @@ function BastionUI:CreateMainFrame()
     self:BuildFrameworkPage()
     self:BuildStatusBar()
 
+    self:SwitchTab("modules")
     frame:Hide()
 end
 
--- Tab 页面切换
+-- Tab 页面切换 (Gather-Titan 蓝发光选中态转换)
 function BastionUI:SwitchTab(tab)
     self.currentTab = tab
     if tab == "modules" then
-        self.tabModulesBtn.flatBg:SetColorTexture(0.70, 0.15, 0.15, 1) -- 高亮红
-        self.tabFrameworkBtn.flatBg:SetColorTexture(0.20, 0.20, 0.20, 1) -- 暗灰色
+        self.tabModulesBtn:SetBackdropColor(0.1, 0.3, 0.6, 0.8)
+        self.tabModulesBtn:SetBackdropBorderColor(0.2, 0.5, 0.9, 0.9)
+        self.tabModulesBtn.tText:SetTextColor(1.0, 1.0, 1.0)
+
+        self.tabFrameworkBtn:SetBackdropColor(0.1, 0.15, 0.28, 0.6)
+        self.tabFrameworkBtn:SetBackdropBorderColor(0.25, 0.35, 0.55, 0.7)
+        self.tabFrameworkBtn.tText:SetTextColor(0.8, 0.9, 1.0)
+
         self.modulesPage:Show()
         self.frameworkPage:Hide()
     elseif tab == "framework" then
-        self.tabModulesBtn.flatBg:SetColorTexture(0.20, 0.20, 0.20, 1)
-        self.tabFrameworkBtn.flatBg:SetColorTexture(0.70, 0.15, 0.15, 1)
+        self.tabModulesBtn:SetBackdropColor(0.1, 0.15, 0.28, 0.6)
+        self.tabModulesBtn:SetBackdropBorderColor(0.25, 0.35, 0.55, 0.7)
+        self.tabModulesBtn.tText:SetTextColor(0.8, 0.9, 1.0)
+
+        self.tabFrameworkBtn:SetBackdropColor(0.1, 0.3, 0.6, 0.8)
+        self.tabFrameworkBtn:SetBackdropBorderColor(0.2, 0.5, 0.9, 0.9)
+        self.tabFrameworkBtn.tText:SetTextColor(1.0, 1.0, 1.0)
+
         self.modulesPage:Hide()
         self.frameworkPage:Show()
     end
@@ -745,18 +1046,18 @@ function BastionUI:BuildModulesPage()
     local page = self.modulesPage
 
     -- 模块切换下拉选择框
-    local ddWidth = CONTENT_WIDTH - 20
+    local ddWidth = CONTENT_WIDTH - 40
     local moduleDropdown = CreateFlatDropdown(page, L["Select Module"] or "选择战斗模块", ddWidth)
-    moduleDropdown:SetPoint("TOPLEFT", page, "TOPLEFT", 15, -40)
+    moduleDropdown:SetPoint("TOPLEFT", page, "TOPLEFT", 20, -15)
     self.moduleDropdown = moduleDropdown
 
     moduleDropdown:SetOnSelect(function(value)
         self:OnModuleSelected(value)
     end)
 
-    -- 滚动区
-    local scrollFrame = CreateFlatScrollFrame(page, CONTENT_WIDTH - 10, PANEL_HEIGHT - 95)
-    scrollFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 15, -80)
+    -- 动态配置滚轮展示区
+    local scrollFrame = CreateFlatScrollFrame(page, CONTENT_WIDTH - 30, 395)
+    scrollFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 15, -75)
     self.moduleScrollFrame = scrollFrame
 end
 
@@ -818,25 +1119,25 @@ function BastionUI:BuildModuleSettings(module)
     local defs = module:GetSettingDefinitions()
 
     if #defs == 0 then
-        local noSettings = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        noSettings:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -15)
+        local noSettings = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
+        noSettings:SetPoint("TOPLEFT", content, "TOPLEFT", 15, -20)
         noSettings:SetText(L["No settings available"] or "无可用配置项")
-        noSettings:SetTextColor(0.5, 0.5, 0.5, 1)
+        noSettings:SetTextColor(0.5, 0.6, 0.7, 1)
         table.insert(self.settingsWidgets, noSettings)
-        scrollFrame:SetContentHeight(40)
+        scrollFrame:SetContentHeight(60)
         return
     end
 
     -- 模块名总标题
-    local title = content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    title:SetPoint("TOPLEFT", content, "TOPLEFT", 5, -5)
+    local title = content:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -10)
     title:SetText(module:GetDisplayName() .. " " .. (L["Settings"] or "配置项"))
-    title:SetTextColor(0.9, 0.2, 0.2, 1)
+    title:SetTextColor(0.18, 0.65, 1.0)
     table.insert(self.settingsWidgets, title)
 
-    -- 恢复默认值按钮
-    local resetBtn = CreateFlatButton(content, L["Reset to Default"] or "恢复默认", 130, 20, false)
-    resetBtn:SetPoint("TOPRIGHT", content, "TOPRIGHT", -15, -5)
+    -- 恢复默认值按钮 (Gather-Titan 警告红框按钮)
+    local resetBtn = CreateFlatButton(content, L["Reset to Default"] or "恢复默认", 130, 24, false, true)
+    resetBtn:SetPoint("TOPRIGHT", content, "TOPRIGHT", -20, -8)
     resetBtn:SetScript("OnClick", function()
         module:ResetSettings()
         self:BuildModuleSettings(module)
@@ -845,52 +1146,54 @@ function BastionUI:BuildModuleSettings(module)
     end)
     table.insert(self.settingsWidgets, resetBtn)
 
-    local yOffset = 35
+    local yOffset = 45
     local lastWidget = nil
 
     for _, def in ipairs(defs) do
         if def.type == "header" then
-            -- 分组分割线
-            local pane = CreateFrame("Frame", nil, content)
-            pane:SetSize(CONTENT_WIDTH - 25, 20)
+            -- 分组卡片分割线
+            local pane = CreateFrame("Frame", nil, content, "BackdropTemplate")
+            pane:SetSize(CONTENT_WIDTH - 50, 24)
             if lastWidget then
                 pane:SetPoint("TOPLEFT", lastWidget, "BOTTOMLEFT", 0, -15)
             else
-                pane:SetPoint("TOPLEFT", content, "TOPLEFT", 5, -(yOffset + 5))
+                pane:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -(yOffset + 5))
             end
+            pane:SetBackdrop({
+                bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+                edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+                tile = true, tileSize = 12, edgeSize = 12,
+                insets = { left = 2, right = 2, top = 2, bottom = 2 }
+            })
+            pane:SetBackdropColor(0.02, 0.04, 0.08, 0.6)
+            pane:SetBackdropBorderColor(0.12, 0.35, 0.7, 0.4)
 
-            local bgTex = pane:CreateTexture(nil, "BACKGROUND")
-            bgTex:SetHeight(1)
-            bgTex:SetPoint("LEFT", pane, "LEFT", 0, 0)
-            bgTex:SetPoint("RIGHT", pane, "RIGHT", 0, 0)
-            bgTex:SetColorTexture(0.2, 0.2, 0.2, 1)
-
-            local txt = pane:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-            txt:SetPoint("LEFT", pane, "LEFT", 5, 0)
+            local txt = pane:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            txt:SetPoint("LEFT", pane, "LEFT", 10, 0)
             txt:SetText(GetSettingLabel(def))
-            txt:SetTextColor(0.7, 0.7, 0.7, 1)
+            txt:SetTextColor(0.18, 0.65, 1.0)
 
-            yOffset = yOffset + 25
+            yOffset = yOffset + 34
             lastWidget = pane
             table.insert(self.settingsWidgets, pane)
 
         elseif def.type == "slider" then
-            local slider = CreateFlatSlider(content, GetSettingLabel(def), CONTENT_WIDTH - 30, def.min or 0, def.max or 100, def.step or 1)
+            local slider = CreateFlatSlider(content, GetSettingLabel(def), CONTENT_WIDTH - 55, def.min or 0, def.max or 100, def.step or 1)
             if lastWidget then
-                slider:SetPoint("TOPLEFT", lastWidget, "BOTTOMLEFT", 0, -28)
+                slider:SetPoint("TOPLEFT", lastWidget, "BOTTOMLEFT", 0, -12)
             else
-                slider:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -(yOffset + 15))
+                slider:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -(yOffset + 5))
             end
             slider:SetValue(module:GetSetting(def.key) or def.default or def.min or 0)
             slider:SetValueCallback(function(value)
                 module:SetSetting(def.key, value)
                 self:SaveConfig()
             end)
-            yOffset = yOffset + 48
+            yOffset = yOffset + 58
             lastWidget = slider
             table.insert(self.settingsWidgets, slider)
 
-        elseif def.type == "toggle" then
+        elseif def.type == "toggle" or def.type == "checkbox" then
             local cb = CreateFlatCheckbox(content, GetSettingLabel(def), function(checked)
                 module:SetSetting(def.key, checked)
                 self:SaveConfig()
@@ -901,16 +1204,16 @@ function BastionUI:BuildModuleSettings(module)
                 cb:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -(yOffset + 5))
             end
             cb:SetChecked(module:GetSetting(def.key) or false)
-            yOffset = yOffset + 26
+            yOffset = yOffset + 30
             lastWidget = cb
             table.insert(self.settingsWidgets, cb)
 
         elseif def.type == "dropdown" then
-            local dd = CreateFlatDropdown(content, GetSettingLabel(def), CONTENT_WIDTH - 30)
+            local dd = CreateFlatDropdown(content, GetSettingLabel(def), CONTENT_WIDTH - 55)
             if lastWidget then
-                dd:SetPoint("TOPLEFT", lastWidget, "BOTTOMLEFT", 0, -24)
+                dd:SetPoint("TOPLEFT", lastWidget, "BOTTOMLEFT", 0, -12)
             else
-                dd:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -(yOffset + 15))
+                dd:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -(yOffset + 5))
             end
             if def.options then
                 dd:SetItems(def.options)
@@ -923,12 +1226,12 @@ function BastionUI:BuildModuleSettings(module)
                 module:SetSetting(def.key, value)
                 self:SaveConfig()
             end)
-            yOffset = yOffset + 45
+            yOffset = yOffset + 60
             lastWidget = dd
             table.insert(self.settingsWidgets, dd)
 
         elseif def.type == "button" then
-            local btn = CreateFlatButton(content, GetSettingLabel(def), CONTENT_WIDTH - 30, 22, true)
+            local btn = CreateFlatButton(content, GetSettingLabel(def), CONTENT_WIDTH - 55, 26, true)
             if lastWidget then
                 btn:SetPoint("TOPLEFT", lastWidget, "BOTTOMLEFT", 0, -10)
             else
@@ -937,13 +1240,13 @@ function BastionUI:BuildModuleSettings(module)
             btn:SetScript("OnClick", function()
                 if def.onClick then def.onClick() end
             end)
-            yOffset = yOffset + 32
+            yOffset = yOffset + 36
             lastWidget = btn
             table.insert(self.settingsWidgets, btn)
         end
     end
 
-    scrollFrame:SetContentHeight(yOffset + 20)
+    scrollFrame:SetContentHeight(yOffset + 30)
 end
 
 function BastionUI:ClearSettingsWidgets()
@@ -961,28 +1264,33 @@ end
 function BastionUI:BuildFrameworkPage()
     local page = self.frameworkPage
 
-    local scrollFrame = CreateFlatScrollFrame(page, CONTENT_WIDTH - 10, PANEL_HEIGHT - 65)
+    local scrollFrame = CreateFlatScrollFrame(page, CONTENT_WIDTH - 30, 455)
     scrollFrame:SetPoint("TOPLEFT", page, "TOPLEFT", 15, -15)
     self.fwScrollFrame = scrollFrame
     local content = scrollFrame.scrollContent
 
-    -- 快捷键分组分割线
-    local hkPane = CreateFrame("Frame", nil, content)
-    hkPane:SetSize(CONTENT_WIDTH - 25, 20)
-    hkPane:SetPoint("TOPLEFT", content, "TOPLEFT", 5, -5)
-    local l1 = hkPane:CreateTexture(nil, "BACKGROUND")
-    l1:SetHeight(1) l1:SetPoint("LEFT", hkPane, "LEFT", 0, 0) l1:SetPoint("RIGHT", hkPane, "RIGHT", 0, 0)
-    l1:SetColorTexture(0.2, 0.2, 0.2, 1)
+    -- 快捷键分组卡片
+    local hkPane = CreateFrame("Frame", nil, content, "BackdropTemplate")
+    hkPane:SetSize(CONTENT_WIDTH - 50, 26)
+    hkPane:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -10)
+    hkPane:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    hkPane:SetBackdropColor(0.02, 0.04, 0.08, 0.6)
+    hkPane:SetBackdropBorderColor(0.12, 0.35, 0.7, 0.4)
 
-    local txt1 = hkPane:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    txt1:SetPoint("LEFT", hkPane, "LEFT", 5, 0)
+    local txt1 = hkPane:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    txt1:SetPoint("LEFT", hkPane, "LEFT", 10, 0)
     txt1:SetText(L["Hotkey Settings"] or "全局快捷键设置")
-    txt1:SetTextColor(0.7, 0.7, 0.7, 1)
+    txt1:SetTextColor(0.18, 0.65, 1.0)
 
-    local tipText = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    tipText:SetPoint("TOPLEFT", hkPane, "BOTTOMLEFT", 5, -8)
+    local tipText = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
+    tipText:SetPoint("TOPLEFT", hkPane, "BOTTOMLEFT", 10, -10)
     tipText:SetText(L["Click button then press key combo"] or "点击按钮后按下组合键进行绑定：")
-    tipText:SetTextColor(0.5, 0.5, 0.5, 1)
+    tipText:SetTextColor(0.6, 0.7, 0.8, 1)
 
     local hotkeyEntries = {
         { id = "toggleBastion",  label = L["Toggle on/off"] or "主框架开关" },
@@ -994,13 +1302,14 @@ function BastionUI:BuildFrameworkPage()
     local lastAnchor = tipText
 
     for _, entry in ipairs(hotkeyEntries) do
-        local lbl = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        local lbl = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
         lbl:SetPoint("TOPLEFT", lastAnchor, "BOTTOMLEFT", 0, -16)
-        lbl:SetWidth(150)
+        lbl:SetWidth(180)
         lbl:SetJustifyH("LEFT")
         lbl:SetText(entry.label)
+        lbl:SetTextColor(0.8, 0.9, 1.0)
 
-        local btn = CreateFlatButton(content, HotkeyText(self.hotkeys[entry.id]), 150, 22, true)
+        local btn = CreateFlatButton(content, HotkeyText(self.hotkeys[entry.id]), 160, 24, true)
         btn:SetPoint("LEFT", lbl, "RIGHT", 15, 0)
 
         local hotkeyId = entry.id
@@ -1012,18 +1321,23 @@ function BastionUI:BuildFrameworkPage()
         lastAnchor = lbl
     end
 
-    -- 通用设置线
-    local generalPane = CreateFrame("Frame", nil, content)
-    generalPane:SetSize(CONTENT_WIDTH - 25, 20)
+    -- 通用设置分组卡片
+    local generalPane = CreateFrame("Frame", nil, content, "BackdropTemplate")
+    generalPane:SetSize(CONTENT_WIDTH - 50, 26)
     generalPane:SetPoint("TOPLEFT", lastAnchor, "BOTTOMLEFT", 0, -25)
-    local l2 = generalPane:CreateTexture(nil, "BACKGROUND")
-    l2:SetHeight(1) l2:SetPoint("LEFT", generalPane, "LEFT", 0, 0) l2:SetPoint("RIGHT", generalPane, "RIGHT", 0, 0)
-    l2:SetColorTexture(0.2, 0.2, 0.2, 1)
+    generalPane:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    generalPane:SetBackdropColor(0.02, 0.04, 0.08, 0.6)
+    generalPane:SetBackdropBorderColor(0.12, 0.35, 0.7, 0.4)
 
-    local txt2 = generalPane:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    txt2:SetPoint("LEFT", generalPane, "LEFT", 5, 0)
+    local txt2 = generalPane:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    txt2:SetPoint("LEFT", generalPane, "LEFT", 10, 0)
     txt2:SetText(L["General Settings"] or "常规调试设置")
-    txt2:SetTextColor(0.7, 0.7, 0.7, 1)
+    txt2:SetTextColor(0.18, 0.65, 1.0)
 
     -- 调试模式复选框
     local debugCB = CreateFlatCheckbox(content, L["Debug Mode"] or "调试模式输出", function(checked)
@@ -1035,13 +1349,29 @@ function BastionUI:BuildFrameworkPage()
             Bastion:Print(L["Debug mode disabled"] or "调试模式已关闭")
         end
     end)
-    debugCB:SetPoint("TOPLEFT", generalPane, "BOTTOMLEFT", 5, -15)
+    debugCB:SetPoint("TOPLEFT", generalPane, "BOTTOMLEFT", 10, -15)
     debugCB:SetChecked(Bastion.DebugMode or false)
     self.debugCB = debugCB
- 
+
+    -- 数据更新频率下拉选择框 (默认 20Hz)
+    local freqDD = CreateFlatDropdown(content, L["Update Frequency"] or "数据更新频率", 260)
+    freqDD:SetPoint("TOPLEFT", debugCB, "BOTTOMLEFT", 0, -20)
+    freqDD:SetItems({
+        { text = L["20Hz (Recommended - 50ms)"] or "20Hz (推荐 - 50ms)", value = "20Hz" },
+        { text = L["10Hz (Standard - 100ms)"] or "10Hz (标准 - 100ms)", value = "10Hz" },
+        { text = L["60Hz (Extreme - 16.6ms)"] or "60Hz (极速 - 16.6ms)", value = "60Hz" }
+    })
+    freqDD:SetSelectedValue(Bastion.UpdateFrequency or "20Hz")
+    freqDD:SetOnSelect(function(val)
+        Bastion:SetUpdateFrequency(val)
+        self:SaveFrameworkConfig()
+        Bastion:Print((L["Update frequency set to "] or "数据更新频率已设置为 ") .. val)
+    end)
+    self.freqDD = freqDD
+
     -- 语言设置下拉选择框
-    local langDD = CreateFlatDropdown(content, L["Language"] or "界面语言", 180)
-    langDD:SetPoint("TOPLEFT", debugCB, "BOTTOMLEFT", 0, -25)
+    local langDD = CreateFlatDropdown(content, L["Language"] or "界面语言", 260)
+    langDD:SetPoint("TOPLEFT", freqDD, "BOTTOMLEFT", 0, -20)
     langDD:SetItems({
         { text = "简体中文 (zhCN)", value = "zhCN" },
         { text = "English (enUS)", value = "enUS" }
@@ -1056,8 +1386,8 @@ function BastionUI:BuildFrameworkPage()
         Bastion:Print(L["Language changed. Please Reload UI (/reload) to apply changes."] or "语言设置已修改，请重载界面（在聊天框输入 /reload）以应用更改。")
     end)
     self.langDD = langDD
- 
-    scrollFrame:SetContentHeight(350)
+
+    scrollFrame:SetContentHeight(450)
 end
 
 ----------------------------------------------------------------------
@@ -1069,13 +1399,15 @@ function BastionUI:StartRecording(hotkeyId, btn)
         local oldBtn = self._hotkeyButtons[self._recording]
         if oldBtn then
             oldBtn.fontString:SetText(HotkeyText(self.hotkeys[self._recording]))
-            oldBtn.flatBg:SetColorTexture(0.70, 0.15, 0.15, 1)
+            oldBtn:SetBackdropColor(0.1, 0.3, 0.6, 0.8)
+            oldBtn:SetBackdropBorderColor(0.2, 0.5, 0.9, 0.9)
         end
     end
 
     self._recording = hotkeyId
     btn.fontString:SetText("|cFFFFFF00" .. (L["Press key combo..."] or "按下按键...") .. "|r")
-    btn.flatBg:SetColorTexture(0.85, 0.20, 0.20, 1) -- 醒目红高亮
+    btn:SetBackdropColor(0.35, 0.08, 0.08, 0.85)
+    btn:SetBackdropBorderColor(0.95, 0.25, 0.25, 0.95)
 end
 
 function BastionUI:StopRecording(mod, key)
@@ -1088,7 +1420,8 @@ function BastionUI:StopRecording(mod, key)
     local btn = self._hotkeyButtons[id]
     if btn then
         btn.fontString:SetText(HotkeyText(self.hotkeys[id]))
-        btn.flatBg:SetColorTexture(0.70, 0.15, 0.15, 1)
+        btn:SetBackdropColor(0.1, 0.3, 0.6, 0.8)
+        btn:SetBackdropBorderColor(0.2, 0.5, 0.9, 0.9)
     end
 
     self._recording = nil
@@ -1111,7 +1444,7 @@ function BastionUI:PollRecording()
 
     for _, keyVK in ipairs(BINDABLE_VKS) do
         if select(1, TCX.GetKeyState(keyVK)) then
-            if keyVK == 0x1B then -- Esc 取消绑定
+            if keyVK == 0x1B then
                 self:StopRecording(0, 0)
             else
                 self:StopRecording(activeMod, keyVK)
@@ -1122,22 +1455,29 @@ function BastionUI:PollRecording()
 end
 
 ----------------------------------------------------------------------
--- 现代化底部状态栏
+-- 现代化底部状态监察面板 (Gather-Titan Backdrop 风格，底边精确对齐)
 ----------------------------------------------------------------------
 
 function BastionUI:BuildStatusBar()
-    local bar = CreateFrame("Frame", nil, self.frame)
-    bar:SetSize(PANEL_WIDTH - 20, 24)
-    bar:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", 10, 8)
-    ApplyFlatStyle(bar, { 0.08, 0.08, 0.08, 0.98 }, { 0.20, 0.20, 0.20, 1 })
+    local bar = CreateFrame("Frame", nil, self.frame, "BackdropTemplate")
+    bar:SetSize(976, 26)
+    bar:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", 24, 12)
+    bar:SetBackdrop({
+        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 12, edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+    })
+    bar:SetBackdropColor(0.02, 0.03, 0.05, 0.6)
+    bar:SetBackdropBorderColor(0.12, 0.35, 0.7, 0.5)
     self.statusBar = bar
 
-    self.statusText = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    self.statusText:SetPoint("LEFT", bar, "LEFT", 10, 0)
+    self.statusText = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
+    self.statusText:SetPoint("LEFT", bar, "LEFT", 12, 0)
 
-    self.hotkeyHint = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    self.hotkeyHint:SetPoint("RIGHT", bar, "RIGHT", -10, 0)
-    self.hotkeyHint:SetTextColor(0.5, 0.5, 0.5, 1)
+    self.hotkeyHint = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightMed2")
+    self.hotkeyHint:SetPoint("RIGHT", bar, "RIGHT", -12, 0)
+    self.hotkeyHint:SetTextColor(0.6, 0.7, 0.8, 1)
 
     self:UpdateStatusBar()
 end
@@ -1152,7 +1492,7 @@ function BastionUI:UpdateStatusBar()
         status = "|cFFFF4444○|r |cFFFF4444" .. (L["Disabled"] or "主系统关闭") .. "|r"
     end
     if self.selectedModule and self.selectedModule.enabled then
-        status = status .. "  |cFF555555|||r  |cFFDF362D" .. self.selectedModule:GetDisplayName() .. "|r"
+        status = status .. "  |cFF555555|||r  |cFF00E5FF" .. self.selectedModule:GetDisplayName() .. "|r"
     end
     self.statusText:SetText(status)
 
@@ -1181,7 +1521,6 @@ function BastionUI:Toggle()
     end
 end
 
--- 快捷入口，用于在其他地方强制显示 UI
 function BastionUI:Show()
     if self.frame then
         self:RefreshModules(Bastion._MODULES or {})
@@ -1204,7 +1543,7 @@ end
 
 function BastionUI:SaveConfig()
     if Bastion.ConfigManager and Bastion._MODULES then
-        Bastion.ConfigManager:SaveAll(Bastion._MODULES, Bastion.Enabled)
+        Bastion.ConfigManager:SaveAll(Bastion._MODULES)
     end
 end
 
@@ -1215,7 +1554,8 @@ function BastionUI:SaveFrameworkConfig()
             debugMode = Bastion.DebugMode or false,
             bastionEnabled = Bastion.Enabled or false,
             minimapAngle = self.minimapDB.angle or 0,
-            language = self.language or (GetLocale and GetLocale()) or "enUS"
+            language = self.language or (GetLocale and GetLocale()) or "enUS",
+            updateFrequency = Bastion.UpdateFrequency or "20Hz"
         })
     end
 end

@@ -106,7 +106,6 @@ Locale:Register("zhCN", {
     ["UI system initialized"]   = "UI 系统已初始化",
     ["Config loaded"]           = "配置已加载",
     ["Config saved"]            = "配置已保存",
-    ["Missing dependency: AbstractFramework"] = "缺失依赖项：AbstractFramework",
     ["Please download it from:"]              = "请前往此处下载：",
 
     -- 框架设置页
@@ -118,6 +117,11 @@ Locale:Register("zhCN", {
     ["Debug Mode"]                          = "调试模式",
     ["Debug mode enabled"]                  = "调试模式已启用",
     ["Debug mode disabled"]                 = "调试模式已禁用",
+    ["Update Frequency"]                    = "数据更新频率",
+    ["Update frequency set to "]            = "数据更新频率已设置为 ",
+    ["20Hz (Recommended - 50ms)"]           = "20Hz (推荐 - 50ms)",
+    ["10Hz (Standard - 100ms)"]              = "10Hz (标准 - 100ms)",
+    ["60Hz (Extreme - 16.6ms)"]             = "60Hz (极速 - 16.6ms)",
     ["Click button then press key combo"]   = "点击按钮后按下组合键进行录制",
     ["Press key combo..."]                  = "请按下组合键...",
     ["Hotkey updated"]                      = "快捷键已更新",

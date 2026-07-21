@@ -140,6 +140,141 @@ function UnitManager:CreateCustomUnit(token, cb)
     return cachedUnit
 end
 
+---@return Unit[]
+function UnitManager:GetGroupUnits()
+    local list = {}
+    local addedGuids = {}
+
+    -- 1. 首先收集 ObjectManager 中的 3D 友方单位
+    if Bastion.ObjectManager and Bastion.ObjectManager.friends then
+        Bastion.ObjectManager.friends:each(function(unit)
+            if unit and unit:IsValid() then
+                local guid = unit:GetGUID()
+                if guid then
+                    addedGuids[guid] = true
+                end
+                table.insert(list, unit)
+            end
+        end)
+    end
+
+    -- 2. 检查原生 party/raid Token 确保不漏队友（尤其是远距离超视距队友）
+    local isRaid = IsInRaid and IsInRaid()
+    local isGroup = IsInGroup and IsInGroup()
+
+    if isRaid then
+        for i = 1, 40 do
+            local token = "raid" .. i
+            if UnitExists(token) then
+                local guid = UnitGUID(token)
+                if guid and not addedGuids[guid] then
+                    addedGuids[guid] = true
+                    table.insert(list, self:Get(token))
+                end
+            end
+        end
+    elseif isGroup then
+        local pGuid = UnitGUID("player")
+        if pGuid and not addedGuids[pGuid] then
+            addedGuids[pGuid] = true
+            table.insert(list, self:Get("player"))
+        end
+        for i = 1, 4 do
+            local token = "party" .. i
+            if UnitExists(token) then
+                local guid = UnitGUID(token)
+                if guid and not addedGuids[guid] then
+                    addedGuids[guid] = true
+                    table.insert(list, self:Get(token))
+                end
+            end
+        end
+    end
+
+    -- 若单人无队伍且 3D 列表中未发现自己，补全 Player
+    if #list == 0 then
+        table.insert(list, self:Get("player"))
+    end
+
+    return list
+end
+
+---@param selector? string "lowest_hp" | "most_deficit" | "highest_hp"
+---@param includeOffline? boolean 是否包含离线/跨副本/不可见单位，默认 false
+---@return Unit[]
+function UnitManager:GetSortedFriends(selector, includeOffline)
+    selector = selector or "lowest_hp"
+    local now = GetTime()
+
+    -- 帧内缓存：同一帧 (GetTime) 内重复请求相同的排序选择器时，直接复用快照数组，避免反复排序
+    self._sortCache = self._sortCache or {}
+    local cacheKey = selector .. "_" .. tostring(includeOffline or false)
+    if self._sortCacheTime == now and self._sortCache[cacheKey] then
+        return self._sortCache[cacheKey]
+    end
+
+    if self._sortCacheTime ~= now then
+        self._sortCache = {}
+        self._sortCacheTime = now
+    end
+
+    local rawUnits = self:GetGroupUnits()
+    local units = {}
+    local player = self:Get("player")
+
+    for i = 1, #rawUnits do
+        local u = rawUnits[i]
+        if u and u:IsValid() and u.IsAlive then
+            local isConnected = u:IsConnected()
+            local isVisible = u:IsVisible()
+            local canSee = (not player) or player:IsUnit(u) or player:CanSee(u)
+            if includeOffline or (isConnected and isVisible and canSee) then
+                table.insert(units, u)
+            end
+        end
+    end
+
+    selector = selector or "lowest_hp"
+
+    table.sort(units, function(a, b)
+        if not a then return false end
+        if not b then return true end
+
+        local aliveA = a:IsAlive()
+        local aliveB = b:IsAlive()
+        if aliveA ~= aliveB then
+            return aliveA and not aliveB
+        end
+
+        if selector == "lowest_hp" then
+            local hpA = a:GetHealthPercent() or 100
+            local hpB = b:GetHealthPercent() or 100
+            if hpA ~= hpB then
+                return hpA < hpB
+            end
+        elseif selector == "most_deficit" then
+            local defA = (a:GetMaxHealth() or 0) - (a:GetHealth() or 0)
+            local defB = (b:GetMaxHealth() or 0) - (b:GetHealth() or 0)
+            if defA ~= defB then
+                return defA > defB
+            end
+        elseif selector == "highest_hp" then
+            local hpA = a:GetHealthPercent() or 0
+            local hpB = b:GetHealthPercent() or 0
+            if hpA ~= hpB then
+                return hpA > hpB
+            end
+        end
+
+        local guidA = a:GetGUID() or ""
+        local guidB = b:GetGUID() or ""
+        return guidA < guidB
+    end)
+
+    self._sortCache[cacheKey] = units
+    return units
+end
+
 ---@description Enumerates all friendly units in the battlefield
 ---@param cb fun(unit: Unit):boolean
 ---@return nil

@@ -34,7 +34,7 @@ local Unit = {
 }
 
 function Unit:__index(k)
-    local response = Bastion.ClassMagic:Resolve(Unit, k)
+    local response = Bastion.ClassMagic:Resolve(Unit, k, self)
 
     if k == 'unit' then
         return rawget(self, k)
@@ -128,10 +128,18 @@ function Unit:GetHealth()
     return TCX.ObjectHealth(self:GetPointer())
 end
 
+function Unit:Health()
+    return self:GetHealth()
+end
+
 -- Get the units max health
 ---@return number
 function Unit:GetMaxHealth()
     return TCX.ObjectMaxHealth(self:GetPointer())
+end
+
+function Unit:HealthMax()
+    return self:GetMaxHealth()
 end
 
 -- Get the units health percentage
@@ -162,6 +170,14 @@ end
 ---@return number
 function Unit:GetHealthPercent()
     return self:GetHP()
+end
+
+function Unit:HealthPercent()
+    return self:GetHP()
+end
+
+function Unit:ManaPercent()
+    return self:GetPP(0)
 end
 
 -- Get the units power type
@@ -229,6 +245,20 @@ end
 ---@return boolean
 function Unit:IsAlive()
     return not self:IsDead()
+end
+
+-- Is the unit connected (online)
+---@return boolean
+function Unit:IsConnected()
+    local token = self:GetOMToken()
+    return token and UnitIsConnected(token) or false
+end
+
+-- Is the unit visible (in same zone/instance and within sight)
+---@return boolean
+function Unit:IsVisible()
+    local token = self:GetOMToken()
+    return token and UnitIsVisible(token) or false
 end
 
 -- Is the unit a pet
