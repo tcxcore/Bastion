@@ -202,13 +202,13 @@ end
 ---@param selector? string "lowest_hp" | "most_deficit" | "highest_hp"
 ---@param includeOffline? boolean 是否包含离线/跨副本/不可见单位，默认 false
 ---@return Unit[]
-function UnitManager:GetSortedFriends(selector, includeOffline)
+function UnitManager:GetSortedFriends(selector, includeOffline, checkLos)
     selector = selector or "lowest_hp"
     local now = GetTime()
 
     -- 帧内缓存：同一帧 (GetTime) 内重复请求相同的排序选择器时，直接复用快照数组，避免反复排序
     self._sortCache = self._sortCache or {}
-    local cacheKey = selector .. "_" .. tostring(includeOffline or false)
+    local cacheKey = selector .. "_" .. tostring(includeOffline or false) .. "_" .. tostring(checkLos or false)
     if self._sortCacheTime == now and self._sortCache[cacheKey] then
         return self._sortCache[cacheKey]
     end
@@ -227,7 +227,7 @@ function UnitManager:GetSortedFriends(selector, includeOffline)
         if u and u:IsValid() and u.IsAlive then
             local isConnected = u:IsConnected()
             local isVisible = u:IsVisible()
-            local canSee = (not player) or player:IsUnit(u) or player:CanSee(u)
+            local canSee = (not checkLos) or (not player) or player:IsUnit(u) or player:CanSee(u)
             if includeOffline or (isConnected and isVisible and canSee) then
                 table.insert(units, u)
             end

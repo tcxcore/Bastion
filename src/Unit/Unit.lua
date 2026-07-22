@@ -412,6 +412,17 @@ local losFlag = bit.bor(0x1, 0x10, 0x100000)
 ---@param unit Unit
 ---@return boolean
 function Unit:CanSee(unit)
+    if not unit then return false end
+
+    local targetGuid = unit:GetGUID()
+    local cacheKey = targetGuid and ("can_see_" .. targetGuid) or nil
+    if cacheKey and self.cache then
+        local cachedVal = self.cache:Get(cacheKey)
+        if cachedVal ~= nil then
+            return cachedVal
+        end
+    end
+
     local ax, ay, az = TCX.ObjectPosition(self:GetPointer())
     local ah = TCX.ObjectHeight(self:GetPointer()) or 1.0
     local tx, ty, tz = TCX.ObjectPosition(unit:GetPointer())
@@ -419,15 +430,20 @@ function Unit:CanSee(unit)
 
     if not ax or not tx then return false end
     if (ax == 0 and ay == 0 and az == 0) or (tx == 0 and ty == 0 and tz == 0) then
+        if cacheKey and self.cache then
+            self.cache:Set(cacheKey, true, Bastion.UpdateInterval or 0.5)
+        end
         return true
     end
 
     local x, y, z = TCX.TraceLine(ax, ay, az + ah, tx, ty, tz + th, losFlag)
-    if x ~= 0 or y ~= 0 or z ~= 0 then
-        return false
-    else
-        return true
+    local canSee = (x == 0 and y == 0 and z == 0)
+
+    if cacheKey and self.cache then
+        self.cache:Set(cacheKey, canSee, Bastion.UpdateInterval or 0.5)
     end
+
+    return canSee
 end
 
 -- Check if the unit is casting a spell

@@ -153,13 +153,17 @@ local function InitializeInGame()
     -- 动态设置更新频率与启动 Ticker 监控 (默认 20Hz / 50ms)
     function Bastion:SetUpdateFrequency(freq)
         local hzMap = {
+            ["1Hz"] = 1,    [1] = 1,
+            ["2Hz"] = 0.5, [2] = 0.5,
+            ["5Hz"] = 0.2, [5] = 0.2,
             ["10Hz"] = 0.1,    [10] = 0.1,
             ["20Hz"] = 0.05,   [20] = 0.05,
             ["60Hz"] = 0.0166, [60] = 0.0166,
         }
 
-        local interval = hzMap[freq] or 0.05
-        self.UpdateFrequency = (type(freq) == "number" and (freq .. "Hz")) or freq or "20Hz"
+        local interval = hzMap[freq] or 0.1
+        self.UpdateInterval = interval
+        self.UpdateFrequency = (type(freq) == "number" and (freq .. "Hz")) or freq or "2Hz"
 
         if self.Ticker and self.Ticker.Cancel then
             self.Ticker:Cancel()
@@ -196,7 +200,7 @@ local function InitializeInGame()
         end)
     end
 
-    Bastion:SetUpdateFrequency("20Hz")
+    Bastion:SetUpdateFrequency("2Hz")
 
     -- 初始化并注册 Slash 命令
     local Command = Bastion.Command:New('bastion')

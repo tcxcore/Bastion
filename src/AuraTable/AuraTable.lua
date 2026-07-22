@@ -10,18 +10,6 @@ if _G.C_UnitAuras then
     end
 end
 
-local GetSpellInfo = function(spellId)
-    if C_Spell and C_Spell.GetSpellInfo then
-        local info = C_Spell.GetSpellInfo(spellId)
-        if info then
-            return info.name, nil, info.iconID, info.castTime, info.minRange, info.maxRange, info.spellID
-        end
-    elseif _G.GetSpellInfo then
-        return _G.GetSpellInfo(spellId)
-    end
-    return nil
-end
-
 -- Create a new AuraTable class
 ---@class AuraTable
 local AuraTable = {}
@@ -40,16 +28,14 @@ function AuraTable:New(unit)
 
     self.guid = unit:GetGUID()
     self.instanceIDLookup = {}
+    self.lastUpdate = 0
 
     return self
 end
 
 ---@param auras UnitAuraUpdateInfo
 ---@return nil
-function AuraTable:OnUpdate(auras)
-    -- 这里忽略增量参数，直接对光环进行全量更新。
-    self:Update()
-end
+
 
 ---@param instanceID number
 ---@return nil
@@ -106,7 +92,7 @@ end
 -- Get a units buffs
 ---@return nil
 function AuraTable:GetUnitBuffs()
-    if _G.UnitBuff or _G.UnitAura or TCX.classic or TCX.era then
+    if _G.UnitBuff or _G.UnitAura or (Bastion.Build ~= "Retail" and Bastion.Build ~= "PTR" and Bastion.Build ~= "Mop") then
         for i = 1, 40 do
             local aura = Bastion.Aura:New(self.unit, i, 'HELPFUL')
 
@@ -153,7 +139,7 @@ end
 -- Get a units debuffs
 ---@return nil
 function AuraTable:GetUnitDebuffs()
-    if _G.UnitDebuff or _G.UnitAura or TCX.classic or TCX.era then
+    if _G.UnitDebuff or _G.UnitAura or (Bastion.Build ~= "Retail" and Bastion.Build ~= "PTR" and Bastion.Build ~= "Mop") then
         for i = 1, 40 do
             local aura = Bastion.Aura:New(self.unit, i, 'HARMFUL')
 
@@ -197,7 +183,7 @@ function AuraTable:GetUnitDebuffs()
     end
 end
 
--- Update auras using TCX native ObjectAuras C++ API
+
 ---@return nil
 function AuraTable:Update()
     self:Clear()
@@ -205,58 +191,7 @@ function AuraTable:Update()
 
     if not self.unit or not self.unit:IsValid() then return end
 
-    -- 使用 TCX 原生 C++ API 检索光环列表 (兼容 3D 对象指针与 Token 字符串)
-    local ptr = self.unit:GetPointer() or self.unit:GetOMToken()
-    if not ptr then return end
-
-    local ok, aurasList = pcall(function()
-        if TCX.ObjectAuras then
-            return TCX.ObjectAuras(ptr)
-        end
-        return nil
-    end)
-
-    if ok and aurasList and type(aurasList) == "table" and #aurasList > 0 then
-        local playerGuid = Bastion.UnitManager['player']:GetGUID()
-
-        for _, info in ipairs(aurasList) do
-            local spellId = info.spellId
-            if spellId then
-                local spellObj = Bastion.Globals.SpellBook:GetSpell(spellId)
-                local auraName = spellObj and spellObj:GetName() or GetSpellInfo(spellId)
-
-                local aura = setmetatable({}, Bastion.Aura)
-                aura.aura = {
-                    name = auraName,
-                    icon = select(3, GetSpellInfo(spellId)),
-                    count = info.stackCount or 1,
-                    dispelType = nil,
-                    duration = info.duration or 0,
-                    expirationTime = info.endTime or 0,
-                    source = info.casterGuid,
-                    isStealable = false,
-                    spellId = spellId,
-                }
-
-                local isFromPlayer = (info.casterGuid and playerGuid and info.casterGuid == playerGuid)
-
-                if isFromPlayer then
-                    if not self.playerAuras[spellId] then
-                        self.playerAuras[spellId] = {}
-                    end
-                    table.insert(self.playerAuras[spellId], aura)
-                else
-                    if not self.auras[spellId] then
-                        self.auras[spellId] = {}
-                    end
-                    table.insert(self.auras[spellId], aura)
-                end
-            end
-        end
-        return
-    end
-
-    -- 兜底逻辑：若 TCX.ObjectAuras 未匹配到数据，回退至原生 API 提取
+    -- 彻底改用魔兽世界原生 API 获取 BUFF 和 DEBUFF 列表
     self:GetUnitBuffs()
     self:GetUnitDebuffs()
 end
@@ -264,46 +199,31 @@ end
 -- Get a units auras
 ---@return table
 function AuraTable:GetUnitAuras()
-    if not self.did then
-        self.did = true
-        self:Update()
-    end
-    -- For token units, we need to check if the GUID has changed
+    local now = GetTime()
+
+    -- GUID 变动判定，必须强制全量刷新
     if self.unit:GetGUID() ~= self.guid then
         self.guid = self.unit:GetGUID()
         self:Update()
-        return self.auras
+    elseif not self.lastUpdate or (now - self.lastUpdate) > (Bastion.UpdateInterval or 0.5) then
+        self:Update()
     end
 
-    -- 限制 0.3 秒的缓存拦截以优化高频性能，同时提供高精度刷新
-    if self.lastUpdate and GetTime() - self.lastUpdate < 0.3 then
-        return self.auras
-    end
-
-    self:Update()
     return self.auras
 end
 
 -- Get a units auras
 ---@return table
 function AuraTable:GetMyUnitAuras()
-    if not self.did then
-        self.did = true
-        self:Update()
-    end
-    -- For token units, we need to check if the GUID has changed
+    local now = GetTime()
+
     if self.unit:GetGUID() ~= self.guid then
         self.guid = self.unit:GetGUID()
         self:Update()
-        return self.playerAuras
+    elseif not self.lastUpdate or (now - self.lastUpdate) > (Bastion.UpdateInterval or 0.5) then
+        self:Update()
     end
 
-    -- 限制 0.3 秒的缓存拦截以优化高频性能，同时提供高精度刷新
-    if self.lastUpdate and GetTime() - self.lastUpdate < 0.3 then
-        return self.playerAuras
-    end
-
-    self:Update()
     return self.playerAuras
 end
 
@@ -321,29 +241,6 @@ end
 function AuraTable:Find(spell)
     if not spell then return Bastion.Aura:New() end
     local spellId = spell:GetID()
-
-    -- 框架层内部封装：优先尝试 TCX 原生 C++ ObjectHasAura 内存直查
-    local ptr = self.unit and (self.unit:GetPointer() or self.unit:GetOMToken())
-    if ptr and TCX.ObjectHasAura and TCX.ObjectHasAura(ptr, spellId) then
-        local auras = self:GetUnitAuras()
-        if auras[spellId] then
-            for _, a in pairs(auras[spellId]) do
-                if a ~= nil and a:IsUp() then return a end
-            end
-        end
-
-        -- 返回已激活的 Aura 实例
-        local auraObj = setmetatable({}, Bastion.Aura)
-        auraObj.aura = {
-            name = spell:GetName(),
-            icon = select(3, GetSpellInfo(spellId)),
-            count = 1,
-            duration = 0,
-            expirationTime = 0,
-            spellId = spellId,
-        }
-        return auraObj
-    end
 
     local auras = self:GetUnitAuras()
     local aurasub = auras[spellId]
@@ -367,8 +264,9 @@ function AuraTable:Find(spell)
             if a:IsUp() then -- Handle expired and non refreshed dropoffs not coming in UNIT_AURA
                 return a
             else
-                if not TCX.classic or TCX.era then
-                    self:RemoveInstanceID(a:GetAuraInstanceID())
+                local instanceID = a:GetAuraInstanceID()
+                if instanceID then
+                    self:RemoveInstanceID(instanceID)
                 end
             end
         end
@@ -406,8 +304,9 @@ function AuraTable:FindMy(spell)
             if a:IsUp() then -- Handle expired and non refreshed dropoffs not coming in UNIT_AURA
                 return a
             else
-                if not TCX.classic or TCX.era then
-                    self:RemoveInstanceID(a:GetAuraInstanceID())
+                local instanceID = a:GetAuraInstanceID()
+                if instanceID then
+                    self:RemoveInstanceID(instanceID)
                 end
             end
         end
@@ -435,8 +334,9 @@ function AuraTable:FindFrom(spell, source)
                     return a
                 end
             else
-                if not TCX.classic or TCX.era then
-                    self:RemoveInstanceID(a:GetAuraInstanceID())
+                local instanceID = a:GetAuraInstanceID()
+                if instanceID then
+                    self:RemoveInstanceID(instanceID)
                 end
             end
         end
@@ -463,8 +363,9 @@ function AuraTable:FindTheirs(spell)
                     return a
                 end
             else
-                if not TCX.classic or TCX.era then
-                    self:RemoveInstanceID(a:GetAuraInstanceID())
+                local instanceID = a:GetAuraInstanceID()
+                if instanceID then
+                    self:RemoveInstanceID(instanceID)
                 end
             end
         end

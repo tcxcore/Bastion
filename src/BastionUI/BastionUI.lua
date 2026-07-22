@@ -715,7 +715,7 @@ function BastionUI:Init()
             if cfg.updateFrequency then
                 Bastion:SetUpdateFrequency(cfg.updateFrequency)
             else
-                Bastion:SetUpdateFrequency("20Hz")
+                Bastion:SetUpdateFrequency("2Hz")
             end
             if cfg.language then
                 self.language = cfg.language
@@ -871,7 +871,7 @@ function BastionUI:CreateMainFrame()
     -- 顶部 Header 标题
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", 24, -14)
-    title:SetText("BASTION v1.0.7")
+    title:SetText("BASTION v1.0.8")
     title:SetTextColor(0.18, 0.65, 1.0)
 
     -- 顶部 976px 蓝紫发光分隔线
@@ -1353,15 +1353,18 @@ function BastionUI:BuildFrameworkPage()
     debugCB:SetChecked(Bastion.DebugMode or false)
     self.debugCB = debugCB
 
-    -- 数据更新频率下拉选择框 (默认 20Hz)
+    -- 数据更新频率下拉选择框 (默认 10Hz)
     local freqDD = CreateFlatDropdown(content, L["Update Frequency"] or "数据更新频率", 260)
     freqDD:SetPoint("TOPLEFT", debugCB, "BOTTOMLEFT", 0, -20)
     freqDD:SetItems({
-        { text = L["20Hz (Recommended - 50ms)"] or "20Hz (推荐 - 50ms)", value = "20Hz" },
-        { text = L["10Hz (Standard - 100ms)"] or "10Hz (标准 - 100ms)", value = "10Hz" },
+        { text = L["1Hz (Low power - 1000ms)"] or "1Hz (节能 - 1000ms)", value = "1Hz" },
+        { text = L["2Hz (Recommended - 500ms)"] or "2Hz (推荐 - 500ms)", value = "2Hz" },
+        { text = L["5Hz (Standard - 200ms)"] or "5Hz (标准 - 200ms)", value = "5Hz" },
+        { text = L["10Hz (Responsive - 100ms)"] or "10Hz (流畅 - 100ms)", value = "10Hz" },
+        { text = L["20Hz (High speed - 50ms)"] or "20Hz (高频 - 50ms)", value = "20Hz" },
         { text = L["60Hz (Extreme - 16.6ms)"] or "60Hz (极速 - 16.6ms)", value = "60Hz" }
     })
-    freqDD:SetSelectedValue(Bastion.UpdateFrequency or "20Hz")
+    freqDD:SetSelectedValue(Bastion.UpdateFrequency or "2Hz")
     freqDD:SetOnSelect(function(val)
         Bastion:SetUpdateFrequency(val)
         self:SaveFrameworkConfig()
@@ -1555,7 +1558,7 @@ function BastionUI:SaveFrameworkConfig()
             bastionEnabled = Bastion.Enabled or false,
             minimapAngle = self.minimapDB.angle or 0,
             language = self.language or (GetLocale and GetLocale()) or "enUS",
-            updateFrequency = Bastion.UpdateFrequency or "20Hz"
+            updateFrequency = Bastion.UpdateFrequency or "2Hz"
         })
     end
 end

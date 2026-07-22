@@ -91,10 +91,19 @@ function Aura:New(unit, index, type)
         end
         return Aura:CreateFromUnitAuraInfo(unitAuraInfo)
     end
-
     local name, icon, count, dispelType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId,
-    canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = UnitAura(unit:GetOMToken(), index, type)
+    canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod
 
+    if _G.UnitAura then
+        name, icon, count, dispelType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId,
+        canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = UnitAura(unit:GetOMToken(), index, type)
+    elseif type == "HELPFUL" and _G.UnitBuff then
+        name, icon, count, dispelType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId,
+        canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = UnitBuff(unit:GetOMToken(), index)
+    elseif type == "HARMFUL" and _G.UnitDebuff then
+        name, icon, count, dispelType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId,
+        canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = UnitDebuff(unit:GetOMToken(), index)
+    end
     local self = setmetatable({}, Aura)
     self.aura = {
         name = name,
