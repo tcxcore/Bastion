@@ -76,6 +76,10 @@ function ObjectManager:Refresh()
     self.explosives:clear()
     self:ResetLists()
 
+    if Bastion and not Bastion.Enabled then
+        return
+    end
+
     -- TCX: 使用 TCX.Objects() 枚举对象管理器中的所有对象
     local objects = TCX.Objects()
 

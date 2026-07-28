@@ -21,6 +21,7 @@ function EventManager:New()
     self.wowEventHandlers = {}
 
     _G.Bastion_OnSecureWoWEvent = function(event, ...)
+        if Bastion and not Bastion.Enabled then return end
         if self.wowEventHandlers[event] then
             for _, callback in ipairs(self.wowEventHandlers[event]) do
                 callback(...)
@@ -72,6 +73,7 @@ end
 ---@param ... any
 ---@return nil
 function EventManager:TriggerEvent(event, ...)
+    if Bastion and not Bastion.Enabled then return end
     if self.events[event] then
         for _, handler in pairs(self.events[event]) do
             handler(...)

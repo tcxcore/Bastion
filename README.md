@@ -22,7 +22,7 @@ TCX Discord: https://discord.gg/6UGp9umUUf
 | `UnitManager.lua` | 增加 `GetGroupUnits()` 与 `GetSortedFriends()` 方法，融合 3D 内存扫描与原生 `party`/`raid` 静态 Token，提供强力的团队/小队检索与排序基建。 |
 | `ObjectManager.lua` | 每帧更新缓存对象的内存指针（`unit.unit = object`）；失效对象 Token 检查跳过 |
 | `AuraTable.lua` & `Aura.lua` | 废弃原生 `AuraUtil.ForEachAura`，重构为使用 `TCX.Unlock("C_UnitAuras.GetAuraDataByIndex")` 的底层循环遍历，彻底解决光环查询回调的 Secret Keys 报错；全量更新与 Token 保护。 |
-| `Spell.lua` | 新增 `Spell:IsCurrent()` 等方法，所有法术 CD 及可用性检测均使用 `TCX.Unlock` 封装。 |
+| [Spell.lua] | 新增 `Spell:IsCurrent()` 等方法，所有法术 CD 及可用性检测均使用 `TCX.Unlock` 封装；完善各类职业驱散法术（魔法、诅咒、毒素、疾病）的 ID 映射支持。 |
 | `EventManager.lua` | 建立脱敏桥接架构：将核心事件侦听 Frame 的创建和 `RegisterEvent` 挪入 `C_Timer.TCX.RunScript` 之中独立执行，完全解决 `COMBAT_LOG_EVENT_UNFILTERED` 被安全插件拦截引发的 Taint (`ADDON_ACTION_FORBIDDEN`) 报错。 |
 | `_bastion.lua` | 以脱敏的 `COMBAT_LOG_EVENT_UNFILTERED` 配合 `C_Timer.TCX.GetCurrentEventInfo()` 替代 `UNIT_SPELLCAST_SUCCEEDED` 来获取未污染的 `spellID`，精确触发后摇回调。 |
 | `Vector3.lua` | `FastDistance` 替换为 `math.sqrt` 原生实现 |
@@ -162,6 +162,12 @@ TCX Discord: https://discord.gg/6UGp9umUUf
   在 `UnitManager:GetSortedFriends` 中引入基于 `GetTime()` 的单帧时间戳快照缓存，在 10Hz 更新频率下将单 tick 内重复排序和 C-API 查询消耗降低 **90%**；并在战斗轮询顶端加入了 `Player:IsCastingOrChanneling()` 极速短路阻断，彻底消除大型团本掉帧问题。
 - **3D 视线 (`CanSee`) 与动态法术距离双重安全防护墙**：
   在 `UnitManager:GetSortedFriends` 与 `APL:AddGroupSpell` 团队目标筛选中深度融合 TCX 3D 射线视线检测 (`CanSee`) 与动态法术距离判定 (`spell:IsInRange`)，精准剔除障碍物遮挡、墙后及超视距无效队友，杜绝朝墙发呆与“目标太远”报错。
+- **驱散法术 (Dispel) ID 映射完善**：
+  在 `[Spell.lua]` 中全面完善各类驱散法术的 ID 映射支持，提升团队解控/驱散逻辑的准确性：
+  - **魔法驱散 (`Spell:IsMagicDispel()`)**：增加圣骑士【清洁术】(4987)、牧师【驱散魔法】(527)、萨满【净化灵魂】(51886)、唤魔师【天然解药】(360823)。
+  - **诅咒驱散 (`Spell:IsCurseDispel()`)**：增加德鲁伊【解除诅咒】(2782)、法师【解除诅咒】(475)、萨满【净化灵魂】(51886)、唤魔师【灼热之焰】(374251)。
+  - **毒素驱散 (`Spell:IsPoisonDispel()`)**：增加德鲁伊【驱毒术】(2893) / 【消毒术】(8092)、圣骑士【清洁术】(4987) / 【净化术】(1152)、萨满【净化灵魂】(51886) / 【消毒术】(526)、唤魔师【天然解药】(360823) / 【清毒】(365585) / 【灼热之焰】(374251)。
+  - **疾病驱散 (`Spell:IsDiseaseDispel()`)**：增加圣骑士【清洁术】/【净化术】、牧师【祛病术】(528) / 【防疫术】(552)、萨满【净化灵魂】、唤魔师【灼热之焰】(374251)。
 
 
 ## 环境依赖

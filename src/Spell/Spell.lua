@@ -706,7 +706,11 @@ end
 ---@return boolean
 function Spell:IsMagicDispel()
     return ({
-        [88423] = true
+        [88423] = true,
+        [4987]  = true, -- 圣骑士 清洁术
+        [527]   = true, -- 牧师 驱散魔法
+        [51886] = true, -- 萨满 净化灵魂
+        [360823] = true, -- 唤魔师 天然解药
     })[self:GetID()]
 end
 
@@ -714,7 +718,11 @@ end
 ---@return boolean
 function Spell:IsCurseDispel()
     return ({
-        [88423] = true
+        [88423] = true,
+        [2782]  = true, -- 德鲁伊 解除诅咒
+        [475]   = true, -- 法师 解除诅咒
+        [51886] = true, -- 萨满 净化灵魂
+        [374251] = true, -- 唤魔师 灼热之焰
     })[self:GetID()]
 end
 
@@ -722,14 +730,30 @@ end
 ---@return boolean
 function Spell:IsPoisonDispel()
     return ({
-        [88423] = true
+        [88423] = true,
+        [2893]  = true, -- 德鲁伊 驱毒术
+        [8092]  = true, -- 德鲁伊 消毒术
+        [4987]  = true, -- 圣骑士 清洁术
+        [1152]  = true, -- 圣骑士 净化术
+        [51886] = true, -- 萨满 净化灵魂
+        [526]   = true, -- 萨满 消毒术
+        [360823] = true, -- 唤魔师 天然解药
+        [365585] = true, -- 唤魔师 清毒
+        [374251] = true, -- 唤魔师 灼热之焰
     })[self:GetID()]
 end
 
 -- IsDiseaseDispel
 ---@return boolean
 function Spell:IsDiseaseDispel()
-    return ({})[self:GetID()]
+    return ({
+        [4987]  = true, -- 圣骑士 清洁术
+        [1152]  = true, -- 圣骑士 净化术
+        [528]   = true, -- 牧师 祛病术
+        [552]   = true, -- 牧师 防疫术
+        [51886] = true, -- 萨满 净化灵魂
+        [374251] = true, -- 唤魔师 灼热之焰
+    })[self:GetID()]
 end
 
 -- IsSpell

@@ -914,6 +914,7 @@ function Unit:StartTTDTicker()
     end
 
     self.ttd_ticker = C_Timer.NewTicker(0.5, function()
+        if Bastion and not Bastion.Enabled then return end
         local timeto = self:PredictTime(0) - GetTime()
         self.ttd = timeto
     end)

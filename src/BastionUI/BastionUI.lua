@@ -811,6 +811,9 @@ function BastionUI:CreateMinimapButton()
             ui:Toggle()
         elseif button == "RightButton" then
             Bastion.Enabled = not Bastion.Enabled
+            if not Bastion.Enabled and Bastion.ObjectManager then
+                Bastion.ObjectManager:Refresh()
+            end
             if Bastion.Enabled then
                 Bastion:Print(L["Enabled"] or "开启")
             else
@@ -871,7 +874,7 @@ function BastionUI:CreateMainFrame()
     -- 顶部 Header 标题
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", 24, -14)
-    title:SetText("BASTION v1.0.8")
+    title:SetText("BASTION v1.0.9")
     title:SetTextColor(0.18, 0.65, 1.0)
 
     -- 顶部 976px 蓝紫发光分隔线
@@ -1577,6 +1580,9 @@ function BastionUI:ProcessHotkeys()
 
     self:_CheckHotkey("toggleBastion", function()
         Bastion.Enabled = not Bastion.Enabled
+        if not Bastion.Enabled and Bastion.ObjectManager then
+            Bastion.ObjectManager:Refresh()
+        end
         if Bastion.Enabled then
             Bastion:Print(L["Enabled"] or "主系统开启")
         else

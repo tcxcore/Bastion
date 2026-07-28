@@ -171,24 +171,24 @@ local function InitializeInGame()
         end
 
         self.Ticker = C_Timer.NewTicker(interval, function()
-            local t = GetTime()
-            if self.UnitManager and self.UnitManager.EnumUnits then
-                self.UnitManager:EnumUnits(function(unit)
-                    if unit and unit:IsAffectingCombat() then
-                        unit:SetLastCombatTime(t)
-                    end
-                end)
-            end
-
-            if self.CombatTimer then
-                if not self.CombatTimer:IsRunning() and TCX.ObjectIsInCombat("player") then
-                    self.CombatTimer:Start()
-                elseif self.CombatTimer:IsRunning() and not TCX.ObjectIsInCombat("player") then
-                    self.CombatTimer:Reset()
-                end
-            end
-
             if self.Enabled then
+                local t = GetTime()
+                if self.UnitManager and self.UnitManager.EnumUnits then
+                    self.UnitManager:EnumUnits(function(unit)
+                        if unit and unit:IsAffectingCombat() then
+                            unit:SetLastCombatTime(t)
+                        end
+                    end)
+                end
+
+                if self.CombatTimer then
+                    if not self.CombatTimer:IsRunning() and TCX.ObjectIsInCombat("player") then
+                        self.CombatTimer:Start()
+                    elseif self.CombatTimer:IsRunning() and not TCX.ObjectIsInCombat("player") then
+                        self.CombatTimer:Reset()
+                    end
+                end
+
                 if self.ObjectManager then self.ObjectManager:Refresh() end
                 local MODULES = self._MODULES or {}
                 for i = 1, #MODULES do MODULES[i]:Tick() end
@@ -207,6 +207,9 @@ local function InitializeInGame()
 
     Command:Register('toggle', L['Toggle bastion on/off'], function()
         Bastion.Enabled = not Bastion.Enabled
+        if not Bastion.Enabled and Bastion.ObjectManager then
+            Bastion.ObjectManager:Refresh()
+        end
         if Bastion.Enabled then
             Bastion:Print(L["Enabled"])
         else
@@ -322,6 +325,9 @@ local function InitializeInGame()
         hostFrame.SetCombatState = function(self, enabled)
             local val = (enabled == true or enabled == 1)
             Bastion.Enabled = val
+            if not Bastion.Enabled and Bastion.ObjectManager then
+                Bastion.ObjectManager:Refresh()
+            end
             if Bastion.UI then
                 if Bastion.UI.UpdateStatusBar then
                     Bastion.UI:UpdateStatusBar()
