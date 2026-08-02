@@ -166,7 +166,7 @@ function UnitManager:GetGroupUnits()
         for i = 1, 40 do
             local token = "raid" .. i
             if UnitExists(token) then
-                local guid = UnitGUID(token)
+                local guid = TCX.Unwrap(UnitGUID(token))
                 if guid and not addedGuids[guid] then
                     addedGuids[guid] = true
                     table.insert(list, self:Get(token))
@@ -174,7 +174,7 @@ function UnitManager:GetGroupUnits()
             end
         end
     elseif isGroup then
-        local pGuid = UnitGUID("player")
+        local pGuid = TCX.Unwrap(UnitGUID("player"))
         if pGuid and not addedGuids[pGuid] then
             addedGuids[pGuid] = true
             table.insert(list, self:Get("player"))
@@ -182,7 +182,7 @@ function UnitManager:GetGroupUnits()
         for i = 1, 4 do
             local token = "party" .. i
             if UnitExists(token) then
-                local guid = UnitGUID(token)
+                local guid = TCX.Unwrap(UnitGUID(token))
                 if guid and not addedGuids[guid] then
                     addedGuids[guid] = true
                     table.insert(list, self:Get(token))

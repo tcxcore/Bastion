@@ -874,7 +874,7 @@ function BastionUI:CreateMainFrame()
     -- 顶部 Header 标题
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", 24, -14)
-    title:SetText("BASTION v1.0.9")
+    title:SetText("BASTION v1.1.0")
     title:SetTextColor(0.18, 0.65, 1.0)
 
     -- 顶部 976px 蓝紫发光分隔线

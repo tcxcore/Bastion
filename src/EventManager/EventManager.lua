@@ -24,7 +24,7 @@ function EventManager:New()
         if Bastion and not Bastion.Enabled then return end
         if self.wowEventHandlers[event] then
             for _, callback in ipairs(self.wowEventHandlers[event]) do
-                callback(...)
+                callback(TCX.Unwrap(...))
             end
         end
     end

@@ -50,10 +50,10 @@ end
 ---@return Spell
 function SpellBook:GetSpellByName(name)
     if C_Spell.GetSpellInfo then
-        local info = C_Spell.GetSpellInfo(name)
+        local info = TCX.Unwrap(C_Spell.GetSpellInfo(name))
         return self:GetSpell(info.spellID)
     end
-    local _, rank, icon, castTime, minRange, maxRange, spellID, originalIcon = GetSpellInfo(name)
+    local _, rank, icon, castTime, minRange, maxRange, spellID, originalIcon = TCX.Unwrap(GetSpellInfo(name))
     return self:GetSpell(spellID)
 end
 

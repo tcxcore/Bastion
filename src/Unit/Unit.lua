@@ -1,18 +1,18 @@
 local tcx, Bastion = ...
 local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
-local function UnitCastingInfo(unit)
+local function UnitCastingInfo(...)
     if not _G.UnitCastingInfo then return end
-    return _G.UnitCastingInfo(unit)
+    return TCX.Unwrap(_G.UnitCastingInfo(...))
 end
 
-local function UnitChannelInfo(unit)
+local function UnitChannelInfo(...)
     if not _G.UnitChannelInfo then return end
-    return _G.UnitChannelInfo(unit)
+    return TCX.Unwrap(_G.UnitChannelInfo(...))
 end
 
-local function GetSpellCooldown(spellId)
+local function GetSpellCooldown(...)
     if not _G.GetSpellCooldown then return end
-    return _G.GetSpellCooldown(spellId)
+    return TCX.Unwrap(_G.GetSpellCooldown(...))
 end
 
 -- Create a new Unit class
@@ -183,21 +183,21 @@ end
 -- Get the units power type
 ---@return number
 function Unit:GetPowerType()
-    return _G.UnitPowerType(self:GetOMToken())
+    return TCX.Unwrap(_G.UnitPowerType(self:GetOMToken()))
 end
 
 -- Get the units power
 ---@param powerType number | nil
 ---@return number
 function Unit:GetPower(powerType)
-    return _G.UnitPower(self:GetOMToken(), powerType)
+    return TCX.Unwrap(_G.UnitPower(self:GetOMToken(), powerType))
 end
 
 -- Get the units max power
 ---@param powerType number | nil
 ---@return number
 function Unit:GetMaxPower(powerType)
-    return _G.UnitPowerMax(self:GetOMToken(), powerType)
+    return TCX.Unwrap(_G.UnitPowerMax(self:GetOMToken(), powerType))
 end
 
 -- Get the units power percentage
