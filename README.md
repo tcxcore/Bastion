@@ -1,4 +1,4 @@
-# Bastion - TCX-Retail/TCX Core 适配版 (v1.1.0)
+# Bastion - TCX-Retail/TCX Core 适配版 (v1.1.1)
 
 基于 [4n0n/Bastion](https://git.tinkr.site/4n0n/bastion) 框架，完整适配 TCX-Retail/TCX Core 内存直接交互架构。
 

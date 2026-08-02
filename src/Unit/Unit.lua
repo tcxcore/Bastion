@@ -238,7 +238,7 @@ end
 -- Is the unit dead
 ---@return boolean
 function Unit:IsDead()
-    return UnitIsDeadOrGhost(self:GetOMToken())
+    return self:GetHealth() <= 1 or UnitIsDeadOrGhost(self:GetOMToken())
 end
 
 -- Is the unit alive
