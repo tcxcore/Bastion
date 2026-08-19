@@ -1,11 +1,11 @@
 -- Document with emmy lua: https://emmylua.github.io/
-local tcx, Bastion = ...
-local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
+local AOP, Bastion = ...
+local AOP = (type(Bastion) == 'table' and Bastion.AOP) or AOP
 local C_UnitAuras = setmetatable({}, { __index = _G.C_UnitAuras })
 if _G.C_UnitAuras then
     if _G.C_UnitAuras.GetAuraDataByIndex then
         C_UnitAuras.GetAuraDataByIndex = function(unit, index, filter)
-            return TCX.Unwrap(_G.C_UnitAuras.GetAuraDataByIndex(unit, index, filter))
+            return AOP.Unwrap(_G.C_UnitAuras.GetAuraDataByIndex(unit, index, filter))
         end
     end
 end
@@ -98,13 +98,13 @@ function Aura:New(unit, index, type)
 
     if _G.UnitAura then
         name, icon, count, dispelType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId,
-        canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = TCX.Unwrap(UnitAura(unit:GetOMToken(), index, type))
+        canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = AOP.Unwrap(UnitAura(unit:GetOMToken(), index, type))
     elseif type == "HELPFUL" and _G.UnitBuff then
         name, icon, count, dispelType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId,
-        canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = TCX.Unwrap(UnitBuff(unit:GetOMToken(), index))
+        canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = AOP.Unwrap(UnitBuff(unit:GetOMToken(), index))
     elseif type == "HARMFUL" and _G.UnitDebuff then
         name, icon, count, dispelType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId,
-        canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = TCX.Unwrap(UnitDebuff(unit:GetOMToken(), index))
+        canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = AOP.Unwrap(UnitDebuff(unit:GetOMToken(), index))
     end
     local self = setmetatable({}, Aura)
     self.aura = {
@@ -250,7 +250,7 @@ function Aura:GetSource()
     local src = self.aura.source
     if not src then return nil end
     -- 某些 UnitToken (如 partypet4) 在通过 UnitManager.__index
-    -- → ObjectGUID() → TCX_Probe 处理时，内部可能产生被暴雪
+    -- → ObjectGUID() → AOP_Probe 处理时，内部可能产生被暴雪
     -- Taint 系统标记的 secret string, 导致字符串操作报错
     -- 使用 pcall 保护避免崩溃
     local ok, unit = pcall(function()

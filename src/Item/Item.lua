@@ -1,5 +1,5 @@
-local tcx, Bastion = ...
-local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
+local AOP, Bastion = ...
+local AOP = (type(Bastion) == 'table' and Bastion.AOP) or AOP
 
 -- Create a new Item class
 ---@class Item
@@ -281,8 +281,8 @@ function Item:Click(x, y, z)
         -- 实时读取当前鼠标物理按键状态（而非 Use() 时的快照）
         local rightNow = IsMouseButtonDown("RightButton")
         local leftNow = IsMouseButtonDown("LeftButton")
-        -- TCX 使用 ClickPosition 进行 AOE 落点点击
-        TCX.ClickPosition(x, y, z)
+        -- AOP 使用 ClickPosition 进行 AOE 落点点击
+        AOP.ClickPosition(x, y, z)
         -- 基于当前时刻的真实鼠标状态恢复锁定
         if rightNow then
             TurnOrActionStart()
@@ -311,10 +311,10 @@ end
 function Item:IsInRange(unit)
     local name, rank, icon, UseTime, Itemmin, Itemmax, ItemID = GetItemInfo(self:GetID())
 
-    local them = TCX.Object(unit:GetOMToken())
+    local them = AOP.Object(unit:GetOMToken())
 
-    local tx, ty, tz = TCX.ObjectPosition(unit:GetOMToken())
-    local px, py, pz = TCX.ObjectPosition('player')
+    local tx, ty, tz = AOP.ObjectPosition(unit:GetOMToken())
+    local px, py, pz = AOP.ObjectPosition('player')
 
     if not them then
         return false
@@ -324,8 +324,8 @@ function Item:IsInRange(unit)
         return true
     end
 
-    local combatReach = TCX.ObjectCombatReach("player")
-    local themCombatReach = TCX.ObjectCombatReach(unit:GetOMToken())
+    local combatReach = AOP.ObjectCombatReach("player")
+    local themCombatReach = AOP.ObjectCombatReach(unit:GetOMToken())
 
     if Bastion.UnitManager['player']:InMelee(unit) and Itemmin == 0 then
         return true

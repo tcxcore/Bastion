@@ -1,107 +1,107 @@
-local tcx, Bastion = ...
-local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
+local AOP, Bastion = ...
+local AOP = (type(Bastion) == 'table' and Bastion.AOP) or AOP
 local C_Spell = setmetatable({}, { __index = _G.C_Spell })
 if _G.C_Spell then
     if _G.C_Spell.GetSpellCooldown then
         C_Spell.GetSpellCooldown = function(spellId)
-            return TCX.Unwrap(_G.C_Spell.GetSpellCooldown(spellId))
+            return AOP.Unwrap(_G.C_Spell.GetSpellCooldown(spellId))
         end
     end
     if _G.C_Spell.GetSpellCharges then
         C_Spell.GetSpellCharges = function(spellId)
-            return TCX.Unwrap(_G.C_Spell.GetSpellCharges(spellId))
+            return AOP.Unwrap(_G.C_Spell.GetSpellCharges(spellId))
         end
     end
     if _G.C_Spell.GetSpellInfo then
         C_Spell.GetSpellInfo = function(spellId)
-            return TCX.Unwrap(_G.C_Spell.GetSpellInfo(spellId))
+            return AOP.Unwrap(_G.C_Spell.GetSpellInfo(spellId))
         end
     end
     if _G.C_Spell.GetSpellCastCount then
         C_Spell.GetSpellCastCount = function(spellId)
-            return TCX.Unwrap(_G.C_Spell.GetSpellCastCount(spellId))
+            return AOP.Unwrap(_G.C_Spell.GetSpellCastCount(spellId))
         end
     end
     if _G.C_Spell.IsSpellKnown then
         C_Spell.IsSpellKnown = function(spellId)
-            return TCX.Unwrap(_G.C_Spell.IsSpellKnown(spellId))
+            return AOP.Unwrap(_G.C_Spell.IsSpellKnown(spellId))
         end
     end
     if _G.C_Spell.IsPlayerSpell then
         C_Spell.IsPlayerSpell = function(spellId)
-            return TCX.Unwrap(_G.C_Spell.IsPlayerSpell(spellId))
+            return AOP.Unwrap(_G.C_Spell.IsPlayerSpell(spellId))
         end
     end
     if _G.C_Spell.IsSpellUsable then
         C_Spell.IsSpellUsable = function(spellId)
-            return TCX.Unwrap(_G.C_Spell.IsSpellUsable(spellId))
+            return AOP.Unwrap(_G.C_Spell.IsSpellUsable(spellId))
         end
     end
     if _G.C_Spell.SpellHasRange then
         C_Spell.SpellHasRange = function(spellId)
-            return TCX.Unwrap(_G.C_Spell.SpellHasRange(spellId))
+            return AOP.Unwrap(_G.C_Spell.SpellHasRange(spellId))
         end
     end
     if _G.C_Spell.IsSpellInRange then
         C_Spell.IsSpellInRange = function(spellId, token)
-            return TCX.Unwrap(_G.C_Spell.IsSpellInRange(spellId, token))
+            return AOP.Unwrap(_G.C_Spell.IsSpellInRange(spellId, token))
         end
     end
     if _G.C_Spell.GetSpellPowerCost then
         C_Spell.GetSpellPowerCost = function(spellId)
-            return TCX.Unwrap(_G.C_Spell.GetSpellPowerCost(spellId))
+            return AOP.Unwrap(_G.C_Spell.GetSpellPowerCost(spellId))
         end
     end
 end
 
 local function GetSpellCooldown(spellId)
     if not _G.GetSpellCooldown then return end
-    return TCX.Unwrap(_G.GetSpellCooldown(spellId))
+    return AOP.Unwrap(_G.GetSpellCooldown(spellId))
 end
 
 local function GetSpellCharges(spellId)
     if not _G.GetSpellCharges then return end
-    return TCX.Unwrap(_G.GetSpellCharges(spellId))
+    return AOP.Unwrap(_G.GetSpellCharges(spellId))
 end
 
 local function GetSpellInfo(...)
     if not _G.GetSpellInfo then return end
-    return TCX.Unwrap(_G.GetSpellInfo(...))
+    return AOP.Unwrap(_G.GetSpellInfo(...))
 end
 
 local function GetSpellCount(spellId)
     if not _G.GetSpellCount then return end
-    return TCX.Unwrap(_G.GetSpellCount(spellId))
+    return AOP.Unwrap(_G.GetSpellCount(spellId))
 end
 
 local function IsSpellKnown(...)
     if not _G.IsSpellKnown then return end
-    return TCX.Unwrap(_G.IsSpellKnown(...))
+    return AOP.Unwrap(_G.IsSpellKnown(...))
 end
 
 local function IsPlayerSpell(...)
     if not _G.IsPlayerSpell then return end
-    return TCX.Unwrap(_G.IsPlayerSpell(...))
+    return AOP.Unwrap(_G.IsPlayerSpell(...))
 end
 
 local function IsUsableSpell(...)
     if not _G.IsUsableSpell then return end
-    return TCX.Unwrap(_G.IsUsableSpell(...))
+    return AOP.Unwrap(_G.IsUsableSpell(...))
 end
 
 local function SpellHasRange(...)
     if not _G.SpellHasRange then return end
-    return TCX.Unwrap(_G.SpellHasRange(...))
+    return AOP.Unwrap(_G.SpellHasRange(...))
 end
 
 local function IsSpellInRange(...)
     if not _G.IsSpellInRange then return end
-    return TCX.Unwrap(_G.IsSpellInRange(...))
+    return AOP.Unwrap(_G.IsSpellInRange(...))
 end
 
 local function GetSpellPowerCost(...)
     if not _G.GetSpellPowerCost then return end
-    return TCX.Unwrap(_G.GetSpellPowerCost(...))
+    return AOP.Unwrap(_G.GetSpellPowerCost(...))
 end
 
 -- Create a new Spell class
@@ -371,8 +371,8 @@ function Spell:Cast(unit, condition)
             token = unit and unit:IsValid() and type(unit.GetOMToken) == "function" and unit:GetOMToken() or nil
         end
     end
-    TCX.Unlock("CastSpellByName", self:GetName(), token)
-    TCX.Unlock("SpellCancelQueuedSpell")
+    AOP.Unlock("CastSpellByName", self:GetName(), token)
+    AOP.Unlock("SpellCancelQueuedSpell")
 
     Bastion:Debug("Casting", self)
 
@@ -424,8 +424,8 @@ function Spell:ForceCast(unit)
             token = unit and unit:IsValid() and type(unit.GetOMToken) == "function" and unit:GetOMToken() or nil
         end
     end
-    TCX.Unlock("CastSpellByName", self:GetName(), token)
-    TCX.Unlock("SpellCancelQueuedSpell")
+    AOP.Unlock("CastSpellByName", self:GetName(), token)
+    AOP.Unlock("SpellCancelQueuedSpell")
 
     Bastion:Debug("Casting", self)
 
@@ -556,8 +556,8 @@ function Spell:Click(x, y, z)
         -- 解决读条地面技能期间用户改变鼠标按键状态导致恢复错误的问题
         local rightNow = IsMouseButtonDown("RightButton")
         local leftNow = IsMouseButtonDown("LeftButton")
-        -- TCX 使用 ClickPosition 进行 AOE 落点点击
-        TCX.ClickPosition(x, y, z)
+        -- AOP 使用 ClickPosition 进行 AOE 落点点击
+        AOP.ClickPosition(x, y, z)
         -- 基于当前时刻的真实鼠标状态恢复锁定
         if rightNow then
             TurnOrActionStart()

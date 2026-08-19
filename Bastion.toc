@@ -1,8 +1,8 @@
 ## Title: Bastion
-## Version: 1.1.1
+## Version: 1.1.2
 ## Notes: Bastion Framework
 
-src/TCXAdapter/TCXAdapter.lua
+src/AOPAdapter/AOPAdapter.lua
 src/ClassMagic/ClassMagic.lua
 src/List/List.lua
 src/Library/Library.lua

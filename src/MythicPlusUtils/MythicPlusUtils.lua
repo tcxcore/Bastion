@@ -1,5 +1,5 @@
-local tcx, Bastion = ...
-local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
+local AOP, Bastion = ...
+local AOP = (type(Bastion) == 'table' and Bastion.AOP) or AOP
 
 ---@class MythicPlusUtils
 local MythicPlusUtils = {
@@ -444,7 +444,7 @@ function MythicPlusUtils:New()
                     local aura = Bastion.Aura:CreateFromUnitAuraInfo(addedAuras[i])
 
                     if not self.loggedDebuffs[aura:GetSpell():GetID()] and not aura:IsBuff() then
-                        TCX.WriteFile('bastion-MPlusDebuffs-' .. self.random .. '.lua', [[
+                        AOP.WriteFile('bastion-MPlusDebuffs-' .. self.random .. '.lua', [[
                         AuraName: ]] .. aura:GetName() .. [[
                         AuraID: ]] .. aura:GetSpell():GetID() .. "\n" .. [[
                     ]], true)
@@ -474,7 +474,7 @@ function MythicPlusUtils:New()
 
         self.loggedCasts[spellID] = true
 
-        TCX.WriteFile('bastion-MPlusCasts-' .. self.random .. '.lua', [[
+        AOP.WriteFile('bastion-MPlusCasts-' .. self.random .. '.lua', [[
             CastName: ]] .. name .. [[
             CastID: ]] .. spellID .. "\n" .. [[
         ]], true)
@@ -500,7 +500,7 @@ function MythicPlusUtils:New()
 
         self.loggedCasts[spellID] = true
 
-        TCX.WriteFile('bastion-MPlusCasts-' .. self.random .. '.lua', [[
+        AOP.WriteFile('bastion-MPlusCasts-' .. self.random .. '.lua', [[
             CastName: ]] .. name .. [[
             CastID: ]] .. spellID .. "\n" .. [[
         ]], true)

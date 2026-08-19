@@ -1,18 +1,18 @@
-local tcx, Bastion = ...
-local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
+local AOP, Bastion = ...
+local AOP = (type(Bastion) == 'table' and Bastion.AOP) or AOP
 local function UnitCastingInfo(...)
     if not _G.UnitCastingInfo then return end
-    return TCX.Unwrap(_G.UnitCastingInfo(...))
+    return AOP.Unwrap(_G.UnitCastingInfo(...))
 end
 
 local function UnitChannelInfo(...)
     if not _G.UnitChannelInfo then return end
-    return TCX.Unwrap(_G.UnitChannelInfo(...))
+    return AOP.Unwrap(_G.UnitChannelInfo(...))
 end
 
 local function GetSpellCooldown(...)
     if not _G.GetSpellCooldown then return end
-    return TCX.Unwrap(_G.GetSpellCooldown(...))
+    return AOP.Unwrap(_G.GetSpellCooldown(...))
 end
 
 -- Create a new Unit class
@@ -97,7 +97,7 @@ end
 -- Check if the unit exists
 ---@return boolean
 function Unit:Exists()
-    return TCX.Object(self.unit) ~= nil
+    return AOP.Object(self.unit) ~= nil
 end
 
 -- Get the units token
@@ -109,7 +109,7 @@ end
 -- Get the units name
 ---@return string
 function Unit:GetName()
-    return TCX.ObjectName(self:GetPointer())
+    return AOP.ObjectName(self:GetPointer())
 end
 
 -- Get the units GUID
@@ -119,13 +119,13 @@ function Unit:GetGUID()
     if type(self.unit) == "string" and string.find(self.unit, "-") then
         return self.unit
     end
-    return TCX.ObjectGUID(self.unit)
+    return AOP.ObjectGUID(self.unit)
 end
 
 -- Get the units health
 ---@return number
 function Unit:GetHealth()
-    return TCX.ObjectHealth(self:GetPointer())
+    return AOP.ObjectHealth(self:GetPointer())
 end
 
 function Unit:Health()
@@ -135,7 +135,7 @@ end
 -- Get the units max health
 ---@return number
 function Unit:GetMaxHealth()
-    return TCX.ObjectMaxHealth(self:GetPointer())
+    return AOP.ObjectMaxHealth(self:GetPointer())
 end
 
 function Unit:HealthMax()
@@ -183,21 +183,21 @@ end
 -- Get the units power type
 ---@return number
 function Unit:GetPowerType()
-    return TCX.Unwrap(_G.UnitPowerType(self:GetOMToken()))
+    return AOP.Unwrap(_G.UnitPowerType(self:GetOMToken()))
 end
 
 -- Get the units power
 ---@param powerType number | nil
 ---@return number
 function Unit:GetPower(powerType)
-    return TCX.Unwrap(_G.UnitPower(self:GetOMToken(), powerType))
+    return AOP.Unwrap(_G.UnitPower(self:GetOMToken(), powerType))
 end
 
 -- Get the units max power
 ---@param powerType number | nil
 ---@return number
 function Unit:GetMaxPower(powerType)
-    return TCX.Unwrap(_G.UnitPowerMax(self:GetOMToken(), powerType))
+    return AOP.Unwrap(_G.UnitPowerMax(self:GetOMToken(), powerType))
 end
 
 -- Get the units power percentage
@@ -220,7 +220,7 @@ end
 -- Get the units position
 ---@return Vector3
 function Unit:GetPosition()
-    local x, y, z = TCX.ObjectPosition(self:GetPointer())
+    local x, y, z = AOP.ObjectPosition(self:GetPointer())
     return Bastion.Vector3:New(x, y, z)
 end
 
@@ -313,7 +313,7 @@ function Unit:GetOMToken()
     end
 
     -- 对象指针 (userdata) 或 格式化后的 WOW GUID 直接利用底层 ObjectToken 进行原生多态反查
-    return TCX.ObjectToken(self.unit)
+    return AOP.ObjectToken(self.unit)
 end
 
 -- Get the units memory pointer
@@ -323,7 +323,7 @@ function Unit:GetPointer()
     if type(self.unit) == "userdata" then
         return self.unit
     end
-    return TCX.Object(self.unit)
+    return AOP.Object(self.unit)
 end
 
 
@@ -378,7 +378,7 @@ end
 -- Get if the unit is affecting combat
 ---@return boolean
 function Unit:IsAffectingCombat()
-    return TCX.ObjectIsInCombat(self.unit)
+    return AOP.ObjectIsInCombat(self.unit)
 end
 
 -- Get the units class id
@@ -423,10 +423,10 @@ function Unit:CanSee(unit)
         end
     end
 
-    local ax, ay, az = TCX.ObjectPosition(self:GetPointer())
-    local ah = TCX.ObjectHeight(self:GetPointer()) or 1.0
-    local tx, ty, tz = TCX.ObjectPosition(unit:GetPointer())
-    local th = TCX.ObjectHeight(unit:GetPointer()) or 1.0
+    local ax, ay, az = AOP.ObjectPosition(self:GetPointer())
+    local ah = AOP.ObjectHeight(self:GetPointer()) or 1.0
+    local tx, ty, tz = AOP.ObjectPosition(unit:GetPointer())
+    local th = AOP.ObjectHeight(unit:GetPointer()) or 1.0
 
     if not ax or not tx then return false end
     if (ax == 0 and ay == 0 and az == 0) or (tx == 0 and ty == 0 and tz == 0) then
@@ -436,7 +436,7 @@ function Unit:CanSee(unit)
         return true
     end
 
-    local x, y, z = TCX.TraceLine(ax, ay, az + ah, tx, ty, tz + th, losFlag)
+    local x, y, z = AOP.TraceLine(ax, ay, az + ah, tx, ty, tz + th, losFlag)
     local canSee = (x == 0 and y == 0 and z == 0)
 
     if cacheKey and self.cache then
@@ -652,13 +652,13 @@ end
 -- Is moving
 ---@return boolean
 function Unit:IsMoving()
-    return TCX.ObjectSpeed(self:GetPointer()) > 0
+    return AOP.ObjectSpeed(self:GetPointer()) > 0
 end
 
 -- Is moving at all
 ---@return boolean
 function Unit:IsMovingAtAll()
-    return TCX.ObjectMovementFlag(self:GetPointer()) ~= 0
+    return AOP.ObjectMovementFlag(self:GetPointer()) ~= 0
 end
 
 ---@param unit Unit | nil
@@ -720,9 +720,9 @@ end
 ---@param unit Unit
 ---@return boolean
 function Unit:IsFacing(unit)
-    local rot = TCX.ObjectRotation(self:GetPointer())
-    local x, y, z = TCX.ObjectPosition(self:GetPointer())
-    local x2, y2, z2 = TCX.ObjectPosition(unit:GetPointer())
+    local rot = AOP.ObjectRotation(self:GetPointer())
+    local x, y, z = AOP.ObjectPosition(self:GetPointer())
+    local x2, y2, z2 = AOP.ObjectPosition(unit:GetPointer())
 
     if not x or not x2 or not rot then
         return false
@@ -743,9 +743,9 @@ end
 ---@return boolean
 function Unit:Face(unit)
     if unit then
-        return TCX.FaceObject(unit:GetPointer())
+        return AOP.FaceObject(unit:GetPointer())
     else
-        return TCX.FaceObject(self:GetPointer())
+        return AOP.FaceObject(self:GetPointer())
     end
 end
 
@@ -753,9 +753,9 @@ end
 ---@param unit Unit
 ---@return boolean
 function Unit:IsBehind(unit)
-    local rot = TCX.ObjectRotation(unit:GetPointer())
-    local x, y, z = TCX.ObjectPosition(unit:GetPointer())
-    local x2, y2, z2 = TCX.ObjectPosition(self:GetPointer())
+    local rot = AOP.ObjectRotation(unit:GetPointer())
+    local x, y, z = AOP.ObjectPosition(unit:GetPointer())
+    local x2, y2, z2 = AOP.ObjectPosition(self:GetPointer())
 
     if not x or not x2 then
         return false
@@ -797,15 +797,15 @@ end
 ---@param unit Unit
 ---@return boolean
 function Unit:InMelee(unit)
-    local x, y, z = TCX.ObjectPosition(self.unit)
-    local x2, y2, z2 = TCX.ObjectPosition(unit.unit)
+    local x, y, z = AOP.ObjectPosition(self.unit)
+    local x2, y2, z2 = AOP.ObjectPosition(unit.unit)
 
     if not x or not x2 then
         return false
     end
 
-    local scr = TCX.ObjectCombatReach(self.unit)
-    local ucr = TCX.ObjectCombatReach(unit.unit)
+    local scr = AOP.ObjectCombatReach(self.unit)
+    local ucr = AOP.ObjectCombatReach(unit.unit)
 
     if not scr or not ucr then
         return false
@@ -822,7 +822,7 @@ end
 ---@return number
 function Unit:GetID()
     if self.id then return self.id end
-    self.id = TCX.ObjectId(self:GetPointer())
+    self.id = AOP.ObjectId(self:GetPointer())
     return self.id
 end
 
@@ -1050,7 +1050,7 @@ end
 function Unit:WatchForSwings()
     Bastion.Globals.EventManager:RegisterWoWEvent("COMBAT_LOG_EVENT_UNFILTERED", function()
         local _, subtype, _, sourceGUID, sourceName, _, _, destGUID, destName, destFlags, _, spellID, spellName, _, amount, interrupt, a, b, c, d, offhand, multistrike =
-            C_Timer.TCX.GetCurrentEventInfo()
+            C_Timer.AOP.GetCurrentEventInfo()
 
         if sourceGUID == self:GetGUID() then
             if subtype == "SPELL_ENERGIZE" and spellID == 196911 then
@@ -1082,13 +1082,13 @@ end
 -- ismounted
 ---@return boolean
 function Unit:IsMounted()
-    return TCX.ObjectIsMounted(self:GetPointer())
+    return AOP.ObjectIsMounted(self:GetPointer())
 end
 
 -- isindoors
 ---@return boolean
 function Unit:IsOutdoors()
-    return TCX.ObjectIsOutdoors(self:GetPointer())
+    return AOP.ObjectIsOutdoors(self:GetPointer())
 end
 
 -- IsIndoors
@@ -1100,19 +1100,19 @@ end
 -- IsSubmerged
 ---@return boolean
 function Unit:IsSubmerged()
-    return TCX.ObjectIsSubmerged(self:GetPointer())
+    return AOP.ObjectIsSubmerged(self:GetPointer())
 end
 
 -- IsLootable
 ---@return boolean
 function Unit:IsLootable()
-    return TCX.ObjectLootable(self:GetPointer())
+    return AOP.ObjectLootable(self:GetPointer())
 end
 
 -- GetHeight
 ---@return number
 function Unit:GetHeight()
-    return TCX.ObjectHeight(self:GetPointer())
+    return AOP.ObjectHeight(self:GetPointer())
 end
 
 -- IsDry
@@ -1154,7 +1154,7 @@ end
 -- get the units combat reach
 ---@return number
 function Unit:GetCombatReach()
-    return TCX.ObjectCombatReach(self:GetPointer())
+    return AOP.ObjectCombatReach(self:GetPointer())
 end
 
 -- Get the units combat distance (distance - combat reach (realized distance))
@@ -1194,7 +1194,7 @@ function Unit:GetAngle(Target)
     local sp = self:GetPosition()
     local tp = Target:GetPosition()
 
-    -- 替代 TCX.Common.GetAnglesBetweenPositions
+    -- 替代 AOP.Common.GetAnglesBetweenPositions
     return math.atan2(tp.y - sp.y, tp.x - sp.x)
 end
 
@@ -1251,7 +1251,7 @@ end
 -- Bastion.EventManager:RegisterWoWEvent("UNIT_SPELLCAST_EMPOWER_START", function(...)
 --     local unit, unk, id = ...
 --     if not unit then return end
---     local guid = TCX.ObjectGUID(unit)
+--     local guid = AOP.ObjectGUID(unit)
 --     if not guid then return end
 --     empowering[guid] = -1
 -- end)
@@ -1259,7 +1259,7 @@ end
 -- Bastion.EventManager:RegisterWoWEvent("UNIT_SPELLCAST_EMPOWER_STOP", function(...)
 --     local unit, unk, id = ...
 --     if not unit then return end
---     local guid = TCX.ObjectGUID(unit)
+--     local guid = AOP.ObjectGUID(unit)
 --     if not guid then return end
 --     empowering[guid] = -1
 -- end)

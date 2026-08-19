@@ -1,8 +1,8 @@
-local tcx, Bastion = ...
-local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
+local AOP, Bastion = ...
+local AOP = (type(Bastion) == 'table' and Bastion.AOP) or AOP
 
 -- 检测本地物理磁盘是否存在 Bastion.toc，以判定当前是本地加载还是云端内存加载
-local isLocal = TCX.FileExists("scripts/Bastion/Bastion.toc")
+local isLocal = AOP.FileExists("scripts/Bastion/Bastion.toc")
 
 if not Bastion then
     Bastion = { DebugMode = false }
@@ -90,7 +90,7 @@ local function custom_require_async(file, env_arg, callback)
         return
     end
     
-    TCX.LoadProtectedFile(file, function(success, ...)
+    AOP.LoadProtectedFile(file, function(success, ...)
         if not success then
             local err = ...
             error("custom_require_async: Error loading " .. file .. ": " .. tostring(err))
@@ -182,9 +182,9 @@ local function InitializeInGame()
                 end
 
                 if self.CombatTimer then
-                    if not self.CombatTimer:IsRunning() and TCX.ObjectIsInCombat("player") then
+                    if not self.CombatTimer:IsRunning() and AOP.ObjectIsInCombat("player") then
                         self.CombatTimer:Start()
-                    elseif self.CombatTimer:IsRunning() and not TCX.ObjectIsInCombat("player") then
+                    elseif self.CombatTimer:IsRunning() and not AOP.ObjectIsInCombat("player") then
                         self.CombatTimer:Reset()
                     end
                 end
@@ -259,7 +259,7 @@ local function InitializeInGame()
 
             if spellID then
                 spellName = spellName:gsub("[%W%s]", "")
-                TCX.WriteFile('bastion-' .. UnitClass('player') .. '-' .. rand .. '.lua',
+                AOP.WriteFile('bastion-' .. UnitClass('player') .. '-' .. rand .. '.lua',
                           "local " .. spellName .. " = Bastion.Globals.SpellBook:GetSpell(" .. spellID .. ")\n", true)
             end
             i = i + 1
@@ -417,8 +417,8 @@ f:SetScript("OnEvent", function(self, event, ...)
     InitializeInGame()
 end)
 
-if TCX.IsInGame() then
-    Bastion:Print("Already in game (TCX.IsInGame), forcing direct initialization...")
+if AOP.IsInGame() then
+    Bastion:Print("Already in game (AOP.IsInGame), forcing direct initialization...")
     f:UnregisterEvent("PLAYER_ENTERING_WORLD")
     f:SetScript("OnEvent", nil)
     InitializeInGame()

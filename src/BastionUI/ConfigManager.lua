@@ -1,8 +1,8 @@
 -- Bastion 配置管理器
--- 使用 TCX 文件系统 + JSON 编解码实现配置持久化
+-- 使用 AOP 文件系统 + JSON 编解码实现配置持久化
 
-local tcx, Bastion = ...
-local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
+local AOP, Bastion = ...
+local AOP = (type(Bastion) == 'table' and Bastion.AOP) or AOP
 
 ---@class ConfigManager
 local ConfigManager = {}
@@ -35,8 +35,8 @@ function ConfigManager:EnsureDir()
         else
             path = path .. "/" .. segment
         end
-        if not TCX.DirectoryExists(path) then
-            TCX.CreateDirectory(path)
+        if not AOP.DirectoryExists(path) then
+            AOP.CreateDirectory(path)
         end
     end
 end
@@ -56,11 +56,11 @@ function ConfigManager:SaveAll(modules)
         }
 
         local ok, jsonStr = pcall(function()
-            return TCX.JsonEncode(moduleConfig)
+            return AOP.JsonEncode(moduleConfig)
         end)
 
         if ok and jsonStr then
-            TCX.WriteFile(CONFIG_DIR .. m.name .. ".json", jsonStr, false)
+            AOP.WriteFile(CONFIG_DIR .. m.name .. ".json", jsonStr, false)
         else
             Bastion:Print("|cFFFF4444[ConfigManager]|r 配置序列化失败: " .. m.name)
         end
@@ -73,11 +73,11 @@ function ConfigManager:LoadModuleConfig(m)
     if not m or not m.name then return end
     self:EnsureDir()
     local moduleFile = CONFIG_DIR .. m.name .. ".json"
-    if TCX.FileExists and TCX.FileExists(moduleFile) then
-        local content = TCX.ReadFile(moduleFile)
+    if AOP.FileExists and AOP.FileExists(moduleFile) then
+        local content = AOP.ReadFile(moduleFile)
         if content and content ~= "" then
             local ok, result = pcall(function()
-                return TCX.JsonDecode(content)
+                return AOP.JsonDecode(content)
             end)
             if ok and type(result) == "table" then
                 if result.enabled ~= nil then
@@ -109,21 +109,21 @@ end
 function ConfigManager:SaveFrameworkSettings(settings)
     self:EnsureDir()
     local ok, jsonStr = pcall(function()
-        return TCX.JsonEncode(settings)
+        return AOP.JsonEncode(settings)
     end)
     if ok and jsonStr then
-        TCX.WriteFile(FRAMEWORK_FILE, jsonStr, false)
+        AOP.WriteFile(FRAMEWORK_FILE, jsonStr, false)
     end
 end
 
 --- 加载框架级设置
 ---@return table|nil
 function ConfigManager:LoadFrameworkSettings()
-    if not TCX.FileExists(FRAMEWORK_FILE) then return nil end
-    local content = TCX.ReadFile(FRAMEWORK_FILE)
+    if not AOP.FileExists(FRAMEWORK_FILE) then return nil end
+    local content = AOP.ReadFile(FRAMEWORK_FILE)
     if not content or content == "" then return nil end
     local ok, result = pcall(function()
-        return TCX.JsonDecode(content)
+        return AOP.JsonDecode(content)
     end)
     if ok and type(result) == "table" then
         return result

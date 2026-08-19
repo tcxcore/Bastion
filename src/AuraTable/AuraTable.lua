@@ -1,15 +1,15 @@
-local tcx, Bastion = ...
-local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
+local AOP, Bastion = ...
+local AOP = (type(Bastion) == 'table' and Bastion.AOP) or AOP
 local C_UnitAuras = setmetatable({}, { __index = _G.C_UnitAuras })
 if _G.C_UnitAuras then
     if _G.C_UnitAuras.GetAuraDataByAuraInstanceID then
         C_UnitAuras.GetAuraDataByAuraInstanceID = function(unit, id)
-            return TCX.Unwrap(_G.C_UnitAuras.GetAuraDataByAuraInstanceID(unit, id))
+            return AOP.Unwrap(_G.C_UnitAuras.GetAuraDataByAuraInstanceID(unit, id))
         end
     end
     if _G.C_UnitAuras.GetAuraDataByIndex then
         C_UnitAuras.GetAuraDataByIndex = function(unit, index, filter)
-            return TCX.Unwrap(_G.C_UnitAuras.GetAuraDataByIndex(unit, index, filter))
+            return AOP.Unwrap(_G.C_UnitAuras.GetAuraDataByIndex(unit, index, filter))
         end
     end
 end

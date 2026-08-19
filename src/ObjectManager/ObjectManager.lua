@@ -1,5 +1,5 @@
-local tcx, Bastion = ...
-local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
+local AOP, Bastion = ...
+local AOP = (type(Bastion) == 'table' and Bastion.AOP) or AOP
 
 ---@class ObjectManager
 ---@field _lists table
@@ -80,15 +80,15 @@ function ObjectManager:Refresh()
         return
     end
 
-    -- TCX: 使用 TCX.Objects() 枚举对象管理器中的所有对象
-    local objects = TCX.Objects()
+    -- AOP: 使用 AOP.Objects() 枚举对象管理器中的所有对象
+    local objects = AOP.Objects()
 
     for _, object in pairs(objects) do
         self:EnumLists(object)
 
-        -- TCX: ObjectType 返回对象类型（5=Unit, 6=Player, 7=ActivePlayer）
-        if ({ [5] = true, [6] = true, [7] = true })[TCX.ObjectType(object)] then
-            local guid = TCX.ObjectGUID(object)
+        -- AOP: ObjectType 返回对象类型（5=Unit, 6=Player, 7=ActivePlayer）
+        if ({ [5] = true, [6] = true, [7] = true })[AOP.ObjectType(object)] then
+            local guid = AOP.ObjectGUID(object)
             local unit = Bastion.UnitManager:GetObject(guid)
             if not unit then
                 unit = Bastion.Unit:New(object)
@@ -123,8 +123,8 @@ return ObjectManager
 
 -- -- Register a list of objects that are training dummies
 -- local dummies = Bastion.ObjectManager:RegisterList('dummies', function(object)
---     if TCX.ObjectType(object) == 5 or TCX.ObjectType(object) == 6 then
---         local unit = Bastion.UnitManager:GetObject(TCX.ObjectGUID(object))
+--     if AOP.ObjectType(object) == 5 or AOP.ObjectType(object) == 6 then
+--         local unit = Bastion.UnitManager:GetObject(AOP.ObjectGUID(object))
 
 --         if not unit then
 --             unit = Bastion.Unit:New(object)

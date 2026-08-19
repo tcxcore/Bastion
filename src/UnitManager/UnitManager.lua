@@ -1,5 +1,5 @@
-local tcx, Bastion = ...
-local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
+local AOP, Bastion = ...
+local AOP = (type(Bastion) == 'table' and Bastion.AOP) or AOP
 
 local Unit = Bastion.Unit
 
@@ -8,7 +8,7 @@ local function GetCacheKey(param)
     if not param then return nil end
     local t = type(param)
     if t == "userdata" then
-        return TCX.ObjectGUID(param) or tostring(param)
+        return AOP.ObjectGUID(param) or tostring(param)
     end
     return param
 end
@@ -51,7 +51,7 @@ function UnitManager:__index(k)
 
     if key and self.objects[key] == nil then
         -- 仅当该对象能在游戏内被正确检索出时才进行创建
-        if type(k) == "userdata" or TCX.Object(k) then
+        if type(k) == "userdata" or AOP.Object(k) then
             local unit = Unit:New(k) -- 直接用 k 实例创建，不进行二次转换
             self:SetObject(unit)
             return unit
@@ -166,7 +166,7 @@ function UnitManager:GetGroupUnits()
         for i = 1, 40 do
             local token = "raid" .. i
             if UnitExists(token) then
-                local guid = TCX.Unwrap(UnitGUID(token))
+                local guid = AOP.Unwrap(UnitGUID(token))
                 if guid and not addedGuids[guid] then
                     addedGuids[guid] = true
                     table.insert(list, self:Get(token))
@@ -174,7 +174,7 @@ function UnitManager:GetGroupUnits()
             end
         end
     elseif isGroup then
-        local pGuid = TCX.Unwrap(UnitGUID("player"))
+        local pGuid = AOP.Unwrap(UnitGUID("player"))
         if pGuid and not addedGuids[pGuid] then
             addedGuids[pGuid] = true
             table.insert(list, self:Get("player"))
@@ -182,7 +182,7 @@ function UnitManager:GetGroupUnits()
         for i = 1, 4 do
             local token = "party" .. i
             if UnitExists(token) then
-                local guid = TCX.Unwrap(UnitGUID(token))
+                local guid = AOP.Unwrap(UnitGUID(token))
                 if guid and not addedGuids[guid] then
                     addedGuids[guid] = true
                     table.insert(list, self:Get(token))
@@ -424,7 +424,7 @@ function UnitManager:FindFriendsCentroid(radius, range)
         return unit:GetPosition()
     end
 
-    local _, _, z = TCX.TraceLine(
+    local _, _, z = AOP.TraceLine(
         centroid.x,
         centroid.y,
         centroid.z + 5,
@@ -463,7 +463,7 @@ function UnitManager:FindEnemiesCentroid(radius, range)
         return unit:GetPosition()
     end
 
-    local _, _, z = TCX.TraceLine(
+    local _, _, z = AOP.TraceLine(
         centroid.x,
         centroid.y,
         centroid.z + 5,

@@ -1,6 +1,6 @@
 # Bastion 框架战斗循环开发指南
 
-Bastion 是一个基于 TCX 引擎的高性能 Lua 战斗框架。为了最大化发挥其 C++ 层的内存读取优势，框架内部实现了 `Refreshable` (自动刷新缓存) 和 `SpellBook` (单例法术库)。
+Bastion 是一个基于 AOP 引擎的高性能 Lua 战斗框架。为了最大化发挥其 C++ 层的内存读取优势，框架内部实现了 `Refreshable` (自动刷新缓存) 和 `SpellBook` (单例法术库)。
 
 在目前的架构中，所有战斗循环（Combat Routine，简称 CR）已改造成**外部独立注册**模式，存放在独立项目 **[Bastion-CR]** 中，不再内置于主框架目录。
 
@@ -14,7 +14,7 @@ Bastion 是一个基于 TCX 引擎的高性能 Lua 战斗框架。为了最大�
 
 ### 统一头部职业判定
 ```lua
-local tcx = ...
+local AOP = ...
 
 local _, englishClass = UnitClass("player")
 if englishClass ~= "DRUID" then return end  -- 以德鲁伊为例，若不是当前职业则直接阻断退出
@@ -88,7 +88,7 @@ end
 
 ### 模板示例：
 ```lua
-local tcx = ...
+local AOP = ...
 
 local _, englishClass = UnitClass("player")
 if englishClass ~= "DRUID" then return end
@@ -153,7 +153,7 @@ end
 
 ### 模板示例 (治疗 APL 范例)：
 ```lua
-local tcx = ...
+local AOP = ...
 
 local _, englishClass = UnitClass("player")
 if englishClass ~= "DRUID" then return end
@@ -205,4 +205,4 @@ end
 | **灵活性** | 极强，可随时插入极其复杂的运算 | 强，支持 APL 子树嵌套、团队智能目标 (`AddGroupSpell`) 与 Sequencer 下刷 |
 
 **最终指导原则**：
-在当前的 TCX-Retail / Bastion 环境下，**输出与坦克专精首选过程式短路闭包 (Procedural) 方案**；而在开发**团队治疗（奶德/奶骑/神牧/增辉）模块**或拥有复合逻辑的大型专精时，推荐利用 `AddGroupSpell` 声明式 APL 树来分割代码复杂度。
+在当前的 AOP-Retail / Bastion 环境下，**输出与坦克专精首选过程式短路闭包 (Procedural) 方案**；而在开发**团队治疗（奶德/奶骑/神牧/增辉）模块**或拥有复合逻辑的大型专精时，推荐利用 `AddGroupSpell` 声明式 APL 树来分割代码复杂度。

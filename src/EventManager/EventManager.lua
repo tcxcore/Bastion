@@ -1,5 +1,5 @@
-local tcx, Bastion = ...
-local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
+local AOP, Bastion = ...
+local AOP = (type(Bastion) == 'table' and Bastion.AOP) or AOP
 
 -- Create an EventManager class
 ---@class EventManager
@@ -24,7 +24,7 @@ function EventManager:New()
         if Bastion and not Bastion.Enabled then return end
         if self.wowEventHandlers[event] then
             for _, callback in ipairs(self.wowEventHandlers[event]) do
-                callback(TCX.Unwrap(...))
+                callback(AOP.Unwrap(...))
             end
         end
     end
@@ -62,7 +62,7 @@ function EventManager:RegisterWoWEvent(event, handler)
             end
             _G.BastionSecureEventFrame:RegisterEvent("%s")
         ]], event)
-        TCX.RunScript(scriptStr)
+        AOP.RunScript(scriptStr)
     end
 
     table.insert(self.wowEventHandlers[event], handler)

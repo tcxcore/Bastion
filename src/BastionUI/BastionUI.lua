@@ -2,8 +2,8 @@
 -- 基于魔兽原生 UI API 与 BackdropTemplate 构建
 -- 包含：1024*576 宽屏双栏控制面板、暗青发光科技风格、高精美化控件 (Dropdown / Checkbox / EditBox / CloseButton)
 
-local tcx, Bastion = ...
-local TCX = (type(Bastion) == 'table' and Bastion.TCX) or tcx
+local AOP, Bastion = ...
+local AOP = (type(Bastion) == 'table' and Bastion.AOP) or AOP
 
 ---@class BastionUI
 local BastionUI = {}
@@ -1438,18 +1438,18 @@ end
 
 function BastionUI:PollRecording()
     if not self._recording then return end
-    if not TCX.GetKeyState then return end
+    if not AOP.GetKeyState then return end
 
     local activeMod = 0
     for _, modVK in ipairs(MODIFIER_VKS) do
-        if select(1, TCX.GetKeyState(modVK)) then
+        if select(1, AOP.GetKeyState(modVK)) then
             activeMod = modVK
             break
         end
     end
 
     for _, keyVK in ipairs(BINDABLE_VKS) do
-        if select(1, TCX.GetKeyState(keyVK)) then
+        if select(1, AOP.GetKeyState(keyVK)) then
             if keyVK == 0x1B then
                 self:StopRecording(0, 0)
             else
@@ -1571,7 +1571,7 @@ end
 ----------------------------------------------------------------------
 
 function BastionUI:ProcessHotkeys()
-    if not TCX.GetKeyState then return end
+    if not AOP.GetKeyState then return end
 
     if self._recording then
         self:PollRecording()
@@ -1616,7 +1616,7 @@ function BastionUI:_CheckHotkey(id, callback)
     local hk = self.hotkeys[id]
     if not hk or not hk.key or hk.key == 0 then return end
 
-    local keyDown = select(1, TCX.GetKeyState(hk.key))
+    local keyDown = select(1, AOP.GetKeyState(hk.key))
     if not keyDown then 
         self._keyStates[id] = nil
         return 
@@ -1624,12 +1624,12 @@ function BastionUI:_CheckHotkey(id, callback)
 
     local modDown = true
     if hk.mod and hk.mod > 0 then
-        modDown = select(1, TCX.GetKeyState(hk.mod))
+        modDown = select(1, AOP.GetKeyState(hk.mod))
     end
 
     local anyModDown = false
     for _, modVK in ipairs(MODIFIER_VKS) do
-        if select(1, TCX.GetKeyState(modVK)) then
+        if select(1, AOP.GetKeyState(modVK)) then
             anyModDown = true
             break
         end
