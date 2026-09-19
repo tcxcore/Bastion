@@ -36,6 +36,10 @@ elseif string.match(buildVersion, "^1%.15%.") then
     Bastion.Build = "Classic"
     AOP.classic = true
     AOP.era = true
+elseif string.match(buildVersion, "^1%.60%.") then
+    Bastion.Build = "Forever"
+    AOP.classic = false
+    AOP.era = false
 elseif string.match(buildVersion, "^2%.5%.") then
     Bastion.Build = "TBC"
     AOP.classic = false
