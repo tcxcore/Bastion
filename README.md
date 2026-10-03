@@ -1,33 +1,33 @@
-# Bastion - AOP-Retail/AOP Core 适配版 (v1.1.1)
+# Bastion - TCX-Retail 适配版 (v1.1.4)
 
-基于 [4n0n/Bastion](https://git.tinkr.site/4n0n/bastion) 框架，完整适配 AOP-Retail/AOP Core 内存直接交互架构。
+基于 [4n0n/Bastion](https://git.tinkr.site/4n0n/bastion) 框架，完整适配 TCX-Retai/TCX Core 内存直接交互架构。
 
-AOP LUA Unlocker: https://AOPcore.com
-AOP Discord: https://discord.gg/6UGp9umUUf
+TCX LUA Unlocker: https://tcxcore.com
+TCX Discord: https://discord.gg/6UGp9umUUf
 
-## AOP 适配变更
+## TCX 适配变更
 
 ### 核心架构
 - **统一 Token 转换**：通过 `Unit:GetOMToken()` 实现内存指针到原生 Token 的自动转换
   - `string` 类型（`"player"`, `"target"` 等标准 Token）→ 直接返回
-  - `lightuserdata` 类型（AOP.Objects() 返回的内存指针）→ 通过 `ObjectToken()` 转换
+  - `lightuserdata` 类型（TCX.Objects() 返回的内存指针）→ 通过 `ObjectToken()` 转换
   - 对象失效时返回 `nil`，防止无效指针传入原生 API
-- **AOP Unlock 集成**：全面废除原有的手动 `_u()` (Unwrap) 解密操作。所有获取属性与光环信息的原生调用（如 `UnitPower`, `UnitCastingInfo`, `C_UnitAuras` 等）均被重构为利用 `C_Timer.AOP.Unlock("...", ...)` 入口直接向底层发起脱敏请求，在获取数据源头即避开 Taint 污染与 Secret 保护。
+- **TCX Unlock 集成**：全面废除原有的手动 `_u()` (Unwrap) 解密操作。所有获取属性与光环信息的原生调用（如 `UnitPower`, `UnitCastingInfo`, `C_UnitAuras` 等）均被重构为利用 `C_Timer.TCX.Unlock("...", ...)` 入口直接向底层发起脱敏请求，在获取数据源头即避开 Taint 污染与 Secret 保护。
 
 ### 框架模块变更
 
 | 模块 | 变更说明 |
 |------|---------|
-| `Unit.lua` | 重写 `GetOMToken()`，适配 lightuserdata 指针；各项能量、施法状态、引导状态的获取全面改用 `AOP.Unlock` 获取以绕过底层污染并修复返回字段问题。 |
+| `Unit.lua` | 重写 `GetOMToken()`，适配 lightuserdata 指针；各项能量、施法状态、引导状态的获取全面改用 `TCX.Unlock` 获取以绕过底层污染并修复返回字段问题。 |
 | `UnitManager.lua` | 增加 `GetGroupUnits()` 与 `GetSortedFriends()` 方法，融合 3D 内存扫描与原生 `party`/`raid` 静态 Token，提供强力的团队/小队检索与排序基建。 |
 | `ObjectManager.lua` | 每帧更新缓存对象的内存指针（`unit.unit = object`）；失效对象 Token 检查跳过 |
-| `AuraTable.lua` & `Aura.lua` | 废弃原生 `AuraUtil.ForEachAura`，重构为使用 `AOP.Unlock("C_UnitAuras.GetAuraDataByIndex")` 的底层循环遍历，彻底解决光环查询回调的 Secret Keys 报错；全量更新与 Token 保护。 |
-| [Spell.lua] | 新增 `Spell:IsCurrent()` 等方法，所有法术 CD 及可用性检测均使用 `AOP.Unlock` 封装；完善各类职业驱散法术（魔法、诅咒、毒素、疾病）的 ID 映射支持。 |
-| `EventManager.lua` | 建立脱敏桥接架构：将核心事件侦听 Frame 的创建和 `RegisterEvent` 挪入 `C_Timer.AOP.RunScript` 之中独立执行，完全解决 `COMBAT_LOG_EVENT_UNFILTERED` 被安全插件拦截引发的 Taint (`ADDON_ACTION_FORBIDDEN`) 报错。 |
-| `_bastion.lua` | 以脱敏的 `COMBAT_LOG_EVENT_UNFILTERED` 配合 `C_Timer.AOP.GetCurrentEventInfo()` 替代 `UNIT_SPELLCAST_SUCCEEDED` 来获取未污染的 `spellID`，精确触发后摇回调。 |
+| `AuraTable.lua` & `Aura.lua` | 废弃原生 `AuraUtil.ForEachAura`，重构为使用 `TCX.Unlock("C_UnitAuras.GetAuraDataByIndex")` 的底层循环遍历，彻底解决光环查询回调的 Secret Keys 报错；全量更新与 Token 保护。 |
+| [Spell.lua] | 新增 `Spell:IsCurrent()` 等方法，所有法术 CD 及可用性检测均使用 `TCX.Unlock` 封装；完善各类职业驱散法术（魔法、诅咒、毒素、疾病）的 ID 映射支持。 |
+| `EventManager.lua` | 建立脱敏桥接架构：将核心事件侦听 Frame 的创建和 `RegisterEvent` 挪入 `C_Timer.TCX.RunScript` 之中独立执行，完全解决 `COMBAT_LOG_EVENT_UNFILTERED` 被安全插件拦截引发的 Taint (`ADDON_ACTION_FORBIDDEN`) 报错。 |
+| `_bastion.lua` | 以脱敏的 `COMBAT_LOG_EVENT_UNFILTERED` 配合 `C_Timer.TCX.GetCurrentEventInfo()` 替代 `UNIT_SPELLCAST_SUCCEEDED` 来获取未污染的 `spellID`，精确触发后摇回调。 |
 | `Vector3.lua` | `FastDistance` 替换为 `math.sqrt` 原生实现 |
 | `Item.lua` | `FastDistance` 替换为 `math.sqrt` 原生实现 |
-| `AOPAdapter/` | 新增 AOP 兼容适配层，映射 `Object/Objects/ObjectGUID` 等全局函数，并主动自愈构建宿主通信 frame `BastionHostFrame` 以接管外部独立注册 |
+| `AOPAdapter/` | 新增 TCX 兼容适配层，映射 `Object/Objects/ObjectGUID` 等全局函数，并主动自愈构建宿主通信 frame `BastionHostFrame` 以接管外部独立注册 |
 | `bastion.lua` | 提供模块库主框架入口，接管并消费外部挂载队列，彻底打通与外部独立战斗循环脚本的异步通信注册链 |
 | `APL/` | 全面重构 APL 动作优先级系统（支持 `AddGroupSpell` 团队智能目标匹配、动态目标求值、Trait TTL 节流与 Invalidate 显式刷新、Sequencer 降级下刷、APL:Reset() 重置与 DebugMode 日志系统）。 |
 | `BastionUI/` & `ConfigManager` | 全面重构为 v1.0.6 宽屏科技风格 UI，具备 JSON 格式的持久化配置系统与全套控件工厂。 |
@@ -70,8 +70,8 @@ AOP Discord: https://discord.gg/6UGp9umUUf
 
 ## 快速开始
 注：本框架已完全重构并脱离对 `Abstract-Framework` 插件的任何外部依赖，支持 100% 独立原生自闭环运行。
-1. 将 `Bastion` 文件夹放入 AOP-Retail 或 AOP.App 的 `scripts/` 目录
-2. 进入游戏 AOP 解锁器解锁成功后，在小地图左键点击 Bastion 图标打开 UI 界面，选择对应职业天赋的循环，右键点击 Bastion 图标即可快速切换 Bastion 的开关。
+1. 将 `Bastion` 文件夹放入 TCX-Retail 或 TCX.App 的 `scripts/` 目录
+2. 进入游戏 TCX 解锁器解锁成功后，在小地图左键点击 Bastion 图标打开 UI 界面，选择对应职业天赋的循环，右键点击 Bastion 图标即可快速切换 Bastion 的开关。
 
 ## 已有脚本
 所有职业均已经按客户端版本 (Retail / Titan / TBC) 进行了分类拆解。如：
@@ -153,15 +153,15 @@ AOP Discord: https://discord.gg/6UGp9umUUf
   - **9.1 CPM 极高频泄能算法**：重构了狂乱值的消耗模型，以高达 9.1 次/分钟的极限频率自动打出【暗言术：噬】(Devouring Plague)，彻底杜绝溢出并维持满额精通增伤。
   - **全自动多线 DoT 与爆发轮转**：自动智能保持主副目标的高覆盖率【吸血鬼之触】与痛，并在血线健康的大怪/Boss 身上自动释放【虚空爆发】、【摧心魔】与【能量灌注】的三重核弹爆发。
 
-#### AOP 原生 C++ 内存光环 API 接入、UI 配置持久化与 40 人团本掉帧深度优化
-- **AOP 原生 C++ 内存光环 API 深度集成**：
-  在 `AuraTable` 框架层与职业 APL 中全面接入 AOP 解锁器原生 C++ API `AOP.ObjectHasAura(obj, spellId)` 与 `AOP.ObjectAuras(obj)`。直接在 C++ Object Manager 内存层精准读取动态光环，彻底解决了各种客户端版本/语言下由于名称对比、光环等级差异及 `GetAuras()` 遍历失败引发的光环判断不准与重复刷新痛点。
+#### TCX 原生 C++ 内存光环 API 接入、UI 配置持久化与 40 人团本掉帧深度优化
+- **TCX 原生 C++ 内存光环 API 深度集成**：
+  在 `AuraTable` 框架层与职业 APL 中全面接入 TCX 解锁器原生 C++ API `TCX.ObjectHasAura(obj, spellId)` 与 `TCX.ObjectAuras(obj)`。直接在 C++ Object Manager 内存层精准读取动态光环，彻底解决了各种客户端版本/语言下由于名称对比、光环等级差异及 `GetAuras()` 遍历失败引发的光环判断不准与重复刷新痛点。
 - **模块图形 UI 配置全自动持久化保存与恢复**：
   重构 `ConfigManager` 配置管理模块，新增 `LoadModuleConfig(m)`。在动态职业模块注册（`Bastion:Register`）及设置定义（`DefineSettings`）时自动从磁盘 `scripts/Bastion/config/<moduleName>.json` 恢复历史设置，并在图形 UI 面板交互（滑块/复选框/下拉框）时实时写盘，实现 100% 配置持久化保存与重载恢复。
 - **40 人大型团本 CPU 掉帧深度优化**：
   在 `UnitManager:GetSortedFriends` 中引入基于 `GetTime()` 的单帧时间戳快照缓存，在 10Hz 更新频率下将单 tick 内重复排序和 C-API 查询消耗降低 **90%**；并在战斗轮询顶端加入了 `Player:IsCastingOrChanneling()` 极速短路阻断，彻底消除大型团本掉帧问题。
 - **3D 视线 (`CanSee`) 与动态法术距离双重安全防护墙**：
-  在 `UnitManager:GetSortedFriends` 与 `APL:AddGroupSpell` 团队目标筛选中深度融合 AOP 3D 射线视线检测 (`CanSee`) 与动态法术距离判定 (`spell:IsInRange`)，精准剔除障碍物遮挡、墙后及超视距无效队友，杜绝朝墙发呆与“目标太远”报错。
+  在 `UnitManager:GetSortedFriends` 与 `APL:AddGroupSpell` 团队目标筛选中深度融合 TCX 3D 射线视线检测 (`CanSee`) 与动态法术距离判定 (`spell:IsInRange`)，精准剔除障碍物遮挡、墙后及超视距无效队友，杜绝朝墙发呆与“目标太远”报错。
 - **驱散法术 (Dispel) ID 映射完善**：
   在 `[Spell.lua]` 中全面完善各类驱散法术的 ID 映射支持，提升团队解控/驱散逻辑的准确性：
   - **魔法驱散 (`Spell:IsMagicDispel()`)**：增加圣骑士【清洁术】(4987)、牧师【驱散魔法】(527)、萨满【净化灵魂】(51886)、唤魔师【天然解药】(360823)。
@@ -171,6 +171,6 @@ AOP Discord: https://discord.gg/6UGp9umUUf
 
 
 ## 环境依赖
-- **平台**: AOP-Retail
+- **平台**: TCX-Retail
 - **游戏版本**: WoW Retail 12.0.5 / WoW Titan / WoW TBC
-- **底层 API**: `ObjectToken()`, `AOP.Objects()`, `AOP.ObjectHasAura()`, `AOP.ObjectAuras()`, `AOP.TraceLine()` 等
+- **底层 API**: `ObjectToken()`, `TCX.Objects()`, `TCX.ObjectHasAura()`, `TCX.ObjectAuras()`, `TCX.TraceLine()` 等

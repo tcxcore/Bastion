@@ -1,5 +1,5 @@
 ## Title: Bastion
-## Version: 1.1.3
+## Version: 1.1.4
 ## Notes: Bastion Framework
 
 src/AOPAdapter/AOPAdapter.lua

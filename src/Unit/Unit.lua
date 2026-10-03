@@ -1050,7 +1050,7 @@ end
 function Unit:WatchForSwings()
     Bastion.Globals.EventManager:RegisterWoWEvent("COMBAT_LOG_EVENT_UNFILTERED", function()
         local _, subtype, _, sourceGUID, sourceName, _, _, destGUID, destName, destFlags, _, spellID, spellName, _, amount, interrupt, a, b, c, d, offhand, multistrike =
-            C_Timer.AOP.GetCurrentEventInfo()
+            AOP.GetCurrentEventInfo()
 
         if sourceGUID == self:GetGUID() then
             if subtype == "SPELL_ENERGIZE" and spellID == 196911 then
